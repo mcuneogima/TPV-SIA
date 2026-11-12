@@ -1,0 +1,8 @@
+# dataset_font.yaml
+# Configuración del dataset de font.h para el Autoencoder básico y DAE (Parte 1 del TP5).
+
+data:
+  dataset: font
+  path: data/processed/font.npz
+  val_split: 0.0   # sin split: se usan los 32 patrones para entrenar
+  seed: 42

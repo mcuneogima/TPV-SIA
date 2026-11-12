@@ -1,0 +1,18 @@
+# dataset_sprites.yaml
+# Configuración del dataset de sprites para el VAE (Parte 2 del TP5).
+# Formato: compatible con load_dataset(cfg) de tp5.data.loader
+
+data:
+  dataset: sprites
+  tsx: data/raw/sprites/tileset_colored.tsx
+  png: data/raw/sprites/tileset_legacy.png
+  channels: rgb            # rgb | gray
+  regions:                 # dejar vacío para usar todos los tiles no-fondo
+    # Descomentá y ajustá tras ver figures/data/contact_sheet.png
+    # - {name: personajes, rows: [0, 10], cols: [24, 31]}
+    # - {name: objetos,    rows: [0,  5], cols: [0,  10]}
+  dedup: true
+  hflip_augment: false
+  val_split: 0.2
+  seed: 42
+  path: data/processed/sprites.npz   # salida del preprocesamiento

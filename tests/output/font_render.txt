@@ -1,0 +1,468 @@
+=== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+==== RENDER ASCII DE LOS 32 CARACTERES (font.h) ===
+Patrones : 32
+Features : 35 bits  (7×5)
+Hamming mínimo entre pares: 2  ('l' vs '|')
+Convención: '#' = 1, '.' = 0
+=
+
+--- [00] ` ---
+..#..
+..#..
+...#.
+.....
+.....
+.....
+.....
+--- [01] a ---
+.....
+.###.
+....#
+.##.#
+#..##
+#..##
+.##.#
+--- [02] b ---
+#....
+#....
+#....
+###..
+#..#.
+#..#.
+###..
+--- [03] c ---
+.....
+.....
+.....
+.###.
+#....
+#....
+.###.
+--- [04] d ---
+....#
+....#
+....#
+..###
+.#..#
+.#..#
+..###
+--- [05] e ---
+.....
+.....
+.###.
+#...#
+#####
+#....
+.####
+--- [06] f ---
+..##.
+.#..#
+.#...
+###..
+.#...
+.#...
+.#...
+--- [07] g ---
+.###.
+#...#
+#..##
+.##.#
+....#
+....#
+.###.
+--- [08] h ---
+#....
+#....
+#....
+#.##.
+##..#
+#...#
+#...#
+--- [09] i ---
+.....
+..#..
+.....
+.##..
+..#..
+..#..
+.###.
+--- [10] j ---
+...#.
+.....
+..##.
+...#.
+...#.
+#..#.
+.##..
+--- [11] k ---
+#....
+#....
+#..#.
+#.#..
+##...
+#.#..
+#..#.
+--- [12] l ---
+.##..
+..#..
+..#..
+..#..
+..#..
+..#..
+..#..
+--- [13] m ---
+.....
+.....
+.#.#.
+#.#.#
+#.#.#
+#...#
+#...#
+--- [14] n ---
+.....
+.....
+#.##.
+##..#
+#...#
+#...#
+#...#
+--- [15] o ---
+.....
+.....
+.###.
+#...#
+#...#
+#...#
+.###.
+--- [16] p ---
+.....
+###..
+#..#.
+#..#.
+###..
+#....
+#....
+--- [17] q ---
+.....
+..###
+.#..#
+.#..#
+..###
+....#
+....#
+--- [18] r ---
+.....
+.....
+#.##.
+##..#
+#....
+#....
+#....
+--- [19] s ---
+.....
+.....
+.####
+#....
+.###.
+....#
+####.
+--- [20] t ---
+.#...
+.#...
+###..
+.#...
+.#...
+.#..#
+..##.
+--- [21] u ---
+.....
+.....
+#...#
+#...#
+#...#
+#..##
+.##.#
+--- [22] v ---
+.....
+.....
+#...#
+#...#
+#...#
+.#.#.
+..#..
+--- [23] w ---
+.....
+.....
+#...#
+#...#
+#.#.#
+#.#.#
+.#.#.
+--- [24] x ---
+.....
+.....
+#...#
+.#.#.
+..#..
+.#.#.
+#...#
+--- [25] y ---
+.....
+#...#
+#...#
+.####
+....#
+#...#
+.###.
+--- [26] z ---
+.....
+.....
+#####
+...#.
+..#..
+.#...
+#####
+--- [27] { ---
+..##.
+.#...
+.#...
+#....
+.#...
+.#...
+..##.
+--- [28] | ---
+..#..
+..#..
+..#..
+.....
+..#..
+..#..
+..#..
+--- [29] } ---
+.##..
+...#.
+...#.
+....#
+...#.
+...#.
+.##..
+--- [30] ~ ---
+.#...
+#.#.#
+...#.
+.....
+.....
+.....
+.....
+--- [31] DEL ---
+#####
+#####
+#####
+#####
+#####
+#####
+#####
