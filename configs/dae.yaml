@@ -1,0 +1,52 @@
+run_name: dae_flip_01
+seed: 42
+
+data:
+  dataset: font
+  path: data/processed/font.npz
+  val_split: 0.0
+
+model:
+  type: denoising
+  latent_dim: 16
+  encoder:
+    layers:
+      - {units: 32, activation: relu}
+      - {units: 24, activation: relu}
+      - {units: 16, activation: identity}
+  decoder:
+    layers:
+      - {units: 24, activation: relu}
+      - {units: 32, activation: relu}
+      - {units: 35, activation: sigmoid}
+  init: he
+
+loss:
+  recon: bce
+  beta: 1.0
+  beta_warmup_epochs: 0
+
+noise:
+  kind: flip
+  level: 0.1
+  regenerate_each_epoch: true
+
+optimizer:
+  name: adam
+  lr: 0.001
+  momentum: 0.9
+  beta1: 0.9
+  beta2: 0.999
+  schedule: {name: exp_decay, gamma: 0.9995}
+  grad_clip: 1.0
+
+train:
+  epochs: 8000
+  batch_size: full
+  eval_every: 10
+  early_stop: {metric: max_pixel_errors, threshold: 0, patience: 300}
+
+output:
+  dir: results/runs
+  summary_dir: results/summary
+  save_weights: true

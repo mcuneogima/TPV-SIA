@@ -1,0 +1,24 @@
+# Sweep a2_arquitecturas: Estudio comparativo de optimizadores, pérdidas e inicializaciones
+base: configs/ae_basic.yaml
+seeds: [42, 101, 777]
+
+grid:
+  optimizer.name: [adam, momentum, sgd]
+  loss.recon: [bce, mse]
+  model.init: [xavier, he]
+
+variants:
+  arch_compact:
+    layers:
+      - {units: 16, activation: tanh}
+      - {units: 2,  activation: identity}
+  arch_medium:
+    layers:
+      - {units: 24, activation: tanh}
+      - {units: 12, activation: tanh}
+      - {units: 2,  activation: identity}
+  arch_wide:
+    layers:
+      - {units: 32, activation: tanh}
+      - {units: 16, activation: tanh}
+      - {units: 2,  activation: identity}

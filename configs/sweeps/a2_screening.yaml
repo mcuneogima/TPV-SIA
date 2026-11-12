@@ -1,0 +1,101 @@
+# configs/sweeps/a2_screening.yaml
+#
+# Sweep de screening para la consigna 1.a.2: cubre TODAS las familias de
+# hiperparámetros del motor (optimizador, lr, schedule, pérdida, inicialización,
+# arquitectura, activación oculta y batch size).
+#
+# Corridas por defecto: 4 x 3 x 2 x 2 x 3 x 6 x 2 = 1728 (con seeds: [1]).
+# Verificar SIEMPRE antes con:
+#   python scripts/sweep.py --sweep configs/sweeps/a2_screening.yaml --dry-run
+#
+# Uso recomendado: correr este screening con 1 semilla y pocas épocas para
+# descartar zonas malas, y luego repetir solo las mejores configuraciones con
+# seeds [1, 2, 3] y las 20000 épocas completas.
+
+base: configs/ae_basic.yaml
+
+# Una sola semilla para el screening. Para finalistas usar [1, 2, 3].
+seeds: [1]
+
+grid:
+  # --- Optimizador y learning rate -----------------------------------------
+  optimizer.name: [sgd, momentum, rmsprop, adam]
+  optimizer.lr: [1.0e-2, 1.0e-3, 1.0e-4]
+  # Los parámetros momentum, beta1, beta2 y eps quedan en los defaults del base.
+  optimizer.schedule.name: [constant, exp_decay]   # gamma se toma del base
+  # optimizer.schedule.name: [constant, exp_decay, step]   # 'step' requiere definir sus parámetros en el base
+
+  # --- Función de pérdida ----------------------------------------------------
+  loss.recon: [bce, mse]
+
+  # --- Inicialización de pesos -----------------------------------------------
+  # normal_small actúa como control negativo: debería rendir peor que xavier/he.
+  model.init: [xavier, he, normal_small]
+
+  # --- Arquitectura y activación de capas ocultas ---------------------------
+  # Cada alias define el encoder; el decoder se espeja automáticamente.
+  # Variando el alias se cambian a la vez profundidad, ancho y activación.
+  model.encoder.layers:
+    - arch_small_tanh
+    - arch_medium_tanh
+    - arch_medium_relu
+    - arch_medium_leaky_relu
+    - arch_medium_sigmoid
+    - arch_deep_tanh
+    # - arch_deep_relu            # descomentar para separar profundidad de activación
+    # - arch_wide_tanh
+
+  # --- Parámetros del bucle de entrenamiento --------------------------------
+  train.batch_size: [full, 8]
+
+  # Ejes de un solo valor: sobreescriben el base sin multiplicar corridas.
+  # Menos épocas para el screening; las finalistas se re-entrenan con 20000.
+  train.epochs: [5000]
+  train.eval_every: [50]
+
+  # --- Ejes opcionales (cada uno duplica el total de corridas) --------------
+  # optimizer.grad_clip: [null, 5.0]
+  # train.epochs: [5000, 20000]       # reemplaza al eje de un solo valor de arriba
+
+variants:
+  # Encoder: la última capa es siempre la latente (2 unidades, sin activación).
+  arch_small_tanh:
+    - {units: 16, activation: tanh}
+    - {units: 2,  activation: identity}
+
+  arch_medium_tanh:
+    - {units: 24, activation: tanh}
+    - {units: 12, activation: tanh}
+    - {units: 2,  activation: identity}
+
+  arch_medium_relu:
+    - {units: 24, activation: relu}
+    - {units: 12, activation: relu}
+    - {units: 2,  activation: identity}
+
+  arch_medium_leaky_relu:
+    - {units: 24, activation: leaky_relu}
+    - {units: 12, activation: leaky_relu}
+    - {units: 2,  activation: identity}
+
+  arch_medium_sigmoid:
+    - {units: 24, activation: sigmoid}
+    - {units: 12, activation: sigmoid}
+    - {units: 2,  activation: identity}
+
+  arch_deep_tanh:
+    - {units: 30, activation: tanh}
+    - {units: 20, activation: tanh}
+    - {units: 10, activation: tanh}
+    - {units: 2,  activation: identity}
+
+  # Variantes opcionales (usarlas junto con las líneas comentadas del grid)
+  # arch_deep_relu:
+  #   - {units: 30, activation: relu}
+  #   - {units: 20, activation: relu}
+  #   - {units: 10, activation: relu}
+  #   - {units: 2,  activation: identity}
+  # arch_wide_tanh:
+  #   - {units: 64, activation: tanh}
+  #   - {units: 32, activation: tanh}
+  #   - {units: 2,  activation: identity}

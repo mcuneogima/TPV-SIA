@@ -1,0 +1,57 @@
+run_name: ae_basic_adam_bce
+seed: 42
+data:
+  dataset: font
+  path: data/processed/font.npz
+  val_split: 0.0
+model:
+  type: autoencoder
+  latent_dim: 2
+  init: xavier
+  encoder:
+    layers:
+    - units: 24
+      activation: tanh
+    - units: 12
+      activation: tanh
+    - units: 2
+      activation: identity
+  decoder:
+    layers:
+    - units: 12
+      activation: tanh
+    - units: 24
+      activation: tanh
+    - units: 35
+      activation: sigmoid
+loss:
+  recon: bce
+  beta: 1.0
+  beta_warmup_epochs: 0
+noise:
+  kind: flip
+  level: 0.0
+  regenerate_each_epoch: true
+optimizer:
+  name: adam
+  lr: 0.001
+  momentum: 0.9
+  beta1: 0.9
+  beta2: 0.999
+  decay: 0.9
+  schedule:
+    name: exp_decay
+    gamma: 0.9995
+  grad_clip: null
+train:
+  epochs: 10000
+  batch_size: full
+  eval_every: 10
+  early_stop:
+    metric: max_pixel_errors
+    threshold: 0
+    patience: 200
+output:
+  dir: results/runs
+  summary_dir: results/summary
+  save_weights: true

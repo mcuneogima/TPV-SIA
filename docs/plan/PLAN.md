@@ -305,10 +305,8 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 - Experimento: `configs/sweeps/a2_arquitecturas.yaml`. Se barre de forma escalonada, no con un grid gigante: primero optimizador y lr con una arquitectura fija, luego pérdida (mse vs bce), luego activaciones e inicialización, luego profundidad y ancho, y por último schedule de lr y cantidad de épocas con la mejor configuración. Cada punto con 3 semillas.
 - Objetivo a verificar: los 32 patrones con `max_pixel_errors <= 1`. Si no se logra, identificar el máximo de patrones aprendidos y explicar por qué.
 - Gráficos (`plot_a2.py`):
-  - Curvas de `loss` y de `n_patterns_ok` por época, una línea por configuración (media y banda entre semillas).
-  - Tabla resumen ordenada (exportada a CSV y a tabla del informe): arquitectura, optimizador, pérdida, patrones aprendidos, máx. píxeles erróneos, épocas hasta el objetivo.
+  - Curvas de `loss` y de `n_patterns_ok` por época, una línea por configuración y un gráfico por grupo de hiperparametros (por ej: loss, funciones de activación, etc) (media y banda entre semillas).
   - Gráfico de barras o boxplot de `final_n_patterns_ok` por optimizador y por pérdida (efecto aislado de cada decisión).
-- Si el dataset completo no se aprende: script `plot_failure.py` que muestra los patrones no aprendidos (entrada vs reconstrucción con los píxeles erróneos marcados) y, en el espacio latente, qué puntos quedan superpuestos o cercanos, más la relación con la distancia de Hamming mínima entre letras. Esto responde el pedido de mostrar por qué no se pudo.
 
 **1.a.3 Gráfico del espacio latente.**
 
@@ -380,7 +378,7 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 ## 5. Orden de implementación e hitos
 
 1. **Hito 1 (datos):** parser de `font.h`, validaciones, render de los 32 caracteres, pipeline de sprites, ruido.
-2. **Hito 2 (núcleo):** dense + activaciones + pérdidas + SGD, con gradient check. Primer AE entrenando sobre 2 o 3 patrones, momentum, RMSprop, Adam, schedules, inicializaciones, clipping. Trainer completo con escritura de CSVs y YAML parser.
+2. **Hito 2 (núcleo):** dense + activaciones + pérdidas + SGD, con gradient check. Momentum, RMSprop, Adam, schedules, inicializaciones, clipping. Trainer completo con escritura de CSVs y YAML parser.
 4. **Hito 3 (parte 1.a):** sweep escalonado, gráficos de a.2, latente, generación.
 5. **Hito 4 (parte 1.b):** DAE, evaluación de ruido, gráficos.
 6. **Hito 5 (VAE):** reparametrización, KL, gradient check del VAE completo, experimentos de beta y dimensión, generación.
