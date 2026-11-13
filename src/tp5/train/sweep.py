@@ -45,35 +45,39 @@ def expand_sweep_grid(sweep_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     all_configs: List[Dict[str, Any]] = []
 
-    # Producto cartesiano de los ejes
-    #combos = list(itertools.product(*grid_values)) if grid_values else [()]
+    mode = sweep_cfg.get("mode", "cartesian")
+    if mode == "cartesian":
+        combinations = [
+            (dict(zip(grid_keys, combo)), seed)
+            for combo in (itertools.product(*grid_values) if grid_values else [()])
+            for seed in seeds
+        ]
+    elif mode == "ofat":
+        combinations = [
+            ({key: value}, seed)
+            for key, values in grid.items()
+            for value in values
+            for seed in seeds
+        ]
+    else:
+        raise ValueError(f"Modo de sweep desconocido: '{mode}'. Opciones: cartesian, ofat")
 
-    #for combo in combos:
-    #    for seed in seeds:
-    #        cfg = copy.deepcopy(base_cfg)
-    #        cfg["seed"] = int(seed)
+    seen = set()
+    for overrides, seed in combinations:
+        cfg = copy.deepcopy(base_cfg)
+        cfg["seed"] = int(seed)
 
-    #        for key, val in zip(grid_keys, combo):
-    #            # Resolver si el valor es una referencia a una variante
-    #            if isinstance(val, str) and val in variants:
-    #                resolved_val = copy.deepcopy(variants[val])
-    #            else:
-    #                resolved_val = val
+        for key, val in overrides.items():
+            resolved = copy.deepcopy(variants[val]) if isinstance(val, str) and val in variants else val
+            if isinstance(resolved, dict) and "layers" in resolved and key.endswith(".layers"):
+                resolved = resolved["layers"]
+            set_dotted_key(cfg, key, resolved)
 
-    #            set_dotted_key(cfg, key, resolved_val)
+        fingerprint = yaml.safe_dump(cfg, sort_keys=True)
+        if fingerprint not in seen:
+            all_configs.append(cfg)
+            seen.add(fingerprint)
 
-    #        all_configs.append(cfg)
-    #
-
-    for key in grid_keys:
-        for val in grid[key]:
-            for seed in seeds:
-                cfg = copy.deepcopy(base_cfg)
-                cfg["seed"] = int(seed)
-                resolved = copy.deepcopy(variants[val]) if isinstance(val, str) and val in variants else val
-                set_dotted_key(cfg, key, resolved)
-                all_configs.append(cfg)
-                
     return all_configs
 
 

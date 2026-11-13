@@ -1,20 +1,12 @@
 # configs/sweeps/a2_screening.yaml
 #
-# Sweep de screening para la consigna 1.a.2: cubre TODAS las familias de
-# hiperparámetros del motor (optimizador, lr, schedule, pérdida, inicialización,
-# arquitectura, activación oculta y batch size).
-#
-# Corridas por defecto: 4 x 3 x 2 x 2 x 3 x 6 x 2 = 1728 (con seeds: [1]).
-# Verificar SIEMPRE antes con:
-#   python scripts/sweep.py --sweep configs/sweeps/a2_screening.yaml --dry-run
-#
-# Uso recomendado: correr este screening con 1 semilla y pocas épocas para
-# descartar zonas malas, y luego repetir solo las mejores configuraciones con
-# seeds [1, 2, 3] y las 20000 épocas completas.
+# Screening OFAT para la consigna 1.a.2: varía un factor por vez respecto de
+# configs/ae_basic.yaml, evitando el producto cartesiano de todas las familias.
 
 base: configs/ae_basic.yaml
+mode: ofat
 
-# Una sola semilla para el screening. Para finalistas usar [1, 2, 3].
+# Tres semillas para estimar la variabilidad entre corridas.
 seeds: [1, 2, 3]
 
 grid:
@@ -45,17 +37,7 @@ grid:
     # - arch_deep_relu            # descomentar para separar profundidad de activación
     # - arch_wide_tanh
 
-  # --- Parámetros del bucle de entrenamiento --------------------------------
   train.batch_size: [full, 8]
-
-  # Ejes de un solo valor: sobreescriben el base sin multiplicar corridas.
-  # Menos épocas para el screening; las finalistas se re-entrenan con 20000.
-  train.epochs: [10000]
-  train.eval_every: [50]
-
-  # --- Ejes opcionales (cada uno duplica el total de corridas) --------------
-  # optimizer.grad_clip: [null, 5.0]
-  # train.epochs: [5000, 20000]       # reemplaza al eje de un solo valor de arriba
 
 variants:
   # Encoder: la última capa es siempre la latente (2 unidades, sin activación).

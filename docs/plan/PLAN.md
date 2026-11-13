@@ -321,15 +321,24 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 
 **1.b.1 Arquitectura y justificación.**
 
-- Experimento de comparación para justificar la elección: DAE, midiendo error de reconstrucción sobre entradas ruidosas segun hiperparametros y ruido.
+- Seleccionar hasta 10 configuraciones del screening OFAT de 1.a.2. El ranking mide reconstrucción de los AE ante flip y mask de bajo nivel (0.05 y 0.1), promediando corridas/semillas; así se conservan las variaciones de arquitectura, activación, pérdida, batch, inicialización, optimizador, tasa y schedule que ya se evaluaron.
+- Para cada configuración seleccionada, entrenar un DAE con los mismos hiperparámetros y semillas, usando flip 0.1 y reconstrucción contra el patrón limpio.
+- Incluir un VAE de referencia por configuración, con el mismo cuello latente y tronco encoder (se excluye del tronco la capa determinista que producía el código latente del AE). Se entrena con el mismo flip y conjunto `font.h`; esto permite comparar AE/DAE/VAE en el mismo dominio. No reemplaza la comparación VAE de la Parte 2, cuyo dataset son sprites.
 
 **1.b.2 Estudio del efecto del ruido.**
 
-- Dos ejes: nivel de ruido en entrenamiento (por ejemplo 0.05, 0.1, 0.2) y nivel en test (0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
-- Script `noise_eval.py` calcula y escribe `noise_eval.csv`; `plot_denoise.py` produce:
-  - Curva de caracteres OK promedio vs nivel de ruido, comparando entrada ruidosa sin procesar, salida del AE básico y salida del DAE (mide el aporte real del denoising).
-  - Grilla visual por nivel de ruido: original, ruidosa, reconstruida (con 4 o 5 letras).
-  - Comparación `flip` vs `mask`.
+- Evaluar AE, DAE y VAE con flip y mask en test en niveles `0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5`, con 10 corrupciones reproducibles por nivel. El entrenamiento queda fijo en flip 0.1 para aislar la tolerancia ante ambos tipos de corrupción.
+- `scripts/noise_eval.py` calcula `low_noise_eval.csv`, `shortlist.csv` y `noise_eval.csv`, y genera el ranking de bajo ruido, curvas de fracción de patrones OK/error medio, mapas de calor por configuración/nivel y grillas de originales, entradas ruidosas y reconstrucciones AE/DAE/VAE. Las curvas incluyen la entrada ruidosa sin procesar como referencia.
+- Ejecución completa desde la raíz del repositorio:
+
+  ```bash
+  python scripts/preprocess_font.py
+  python scripts/sweep.py --sweep configs/sweeps/a2_screening.yaml
+  python scripts/noise_eval.py --summary results/summary/runs.csv --runs-dir results/runs \
+    --output-dir results/denoising --figures-dir figures/b --top-n 10
+  ```
+
+  El screening usa `mode: ofat` y tres semillas; cada eje se modifica por separado respecto de `ae_basic.yaml`, no se ejecuta el producto cartesiano. El último comando entrena los finalistas y deja las tablas en `results/denoising/` y las figuras en `figures/b/`. Para regenerar los análisis sin volver a entrenar, agregar `--skip-training` cuando ya existan los pesos DAE/VAE.
 
 ### Parte 2: VAE
 
@@ -367,8 +376,8 @@ Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del data
 | 1.a.2 | `sweeps/a2_arquitecturas.yaml`, `plot_a2.py`, `plot_failure.py` | `runs.csv`, `epochs.csv`, curvas | Tabla comparativa, análisis de qué funcionó, si fue subconjunto el porqué |
 | 1.a.3 | `plot_latent.py` | scatter etiquetado | Estructura del espacio latente |
 | 1.a.4 | `generate.py` | letras nuevas e interpolación | Evaluación crítica |
-| 1.b.1 | `dae.yaml`, comparación de latentes | tabla | Elección de arquitectura |
-| 1.b.2 | `noise_eval.py`, `plot_denoise.py` | `noise_eval.csv`, curvas, grillas | Capacidad de eliminar ruido por nivel |
+| 1.b.1 | `noise_eval.py`, resultados de 1.a.2 | `shortlist.csv` | Selección de configuraciones AE/DAE/VAE |
+| 1.b.2 | `noise_eval.py` | `low_noise_eval.csv`, `shortlist.csv`, `noise_eval.csv`, curvas, heatmaps y grillas | Capacidad de eliminar ruido y comparación AE/DAE/VAE |
 | 2.a | `sprites.py` | `sprites.npz`, grilla | Descripción del dataset |
 | 2.b | `vae_sprites.yaml`, barridos de beta y latente, `plot_vae.py` | curvas recon/KL, grilla latente | Cómo el esquema variacional resuelve el problema |
 | 2.c | `generate.py --mode sample` | muestras, interpolaciones, vecino más cercano | Muestra elegida y criterio |
