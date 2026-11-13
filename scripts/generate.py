@@ -1,20 +1,23 @@
 """
 scripts/generate.py
 ===================
-Generación e interpolación de nuevos caracteres a partir del espacio latente (Consigna 1.a.4).
-Soporta tres modos:
+Generación e interpolación de muestras a partir del espacio latente.
+Soporta los modos:
   (a) Punto específico manual (z1, z2) en zona vacía.
   (b) Punto medio entre dos caracteres conocidos: z_mid = (zA + zB) / 2.
   (c) Interpolación lineal en N pasos entre dos caracteres: z(t) = (1-t)*zA + t*zB.
+  (d) Muestreo de sprites desde el prior normal estándar del VAE.
 
 Uso:
   python scripts/generate.py --mode all
   python scripts/generate.py --mode midpoint --char1 c --char2 o
   python scripts/generate.py --mode interpolate --char1 a --char2 z --steps 9
   python scripts/generate.py --mode point --z 0.0 0.0
+  python scripts/generate.py --mode sample --n-samples 64 --seed 42
 """
 
 import argparse
+import math
 import pathlib
 import sys
 import numpy as np
@@ -26,6 +29,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tp5.analysis.latent import load_model_from_run, load_latent_data
 from tp5.analysis.generate import generate_from_point, generate_midpoint, interpolate_linear
+from tp5.data.loader import load_dataset
 
 
 def find_best_run(summary_csv: pathlib.Path) -> str:
@@ -35,6 +39,120 @@ def find_best_run(summary_csv: pathlib.Path) -> str:
     df = pd.read_csv(summary_csv)
     sorted_df = df.sort_values(by=["final_n_patterns_ok", "final_loss"], ascending=[False, True])
     return str(sorted_df.iloc[0]["run_id"])
+
+
+def find_best_vae_run(summary_csv: pathlib.Path, runs_dir: pathlib.Path) -> str:
+    """Choose the sprite VAE with the lowest recorded validation reconstruction loss."""
+    if not summary_csv.exists():
+        raise FileNotFoundError(f"No existe {summary_csv}")
+    runs = pd.read_csv(summary_csv)
+    runs = runs[
+        (runs["dataset"] == "sprites")
+        & (runs["model_type"] == "vae")
+        & runs["status"].isin(["ok", "early_stopped"])
+    ].copy()
+    runs = runs[runs["run_id"].map(lambda run_id: (runs_dir / str(run_id) / "epochs.csv").exists())]
+    if runs.empty:
+        raise FileNotFoundError("No hay corridas VAE válidas de sprites en el resumen.")
+
+    def validation_loss(run_id: str) -> float:
+        history = pd.read_csv(runs_dir / run_id / "epochs.csv")
+        if "val_loss" not in history or history["val_loss"].dropna().empty:
+            return float("inf")
+        return float(history["val_loss"].dropna().iloc[-1])
+
+    runs["selection_val_loss"] = runs["run_id"].map(validation_loss)
+    selected = runs.sort_values(["selection_val_loss", "final_recon"], ascending=True).iloc[0]
+    return str(selected["run_id"])
+
+
+def plot_prior_samples(
+    model,
+    cfg: dict,
+    run_id: str,
+    output_dir: pathlib.Path,
+    n_samples: int,
+    seed: int,
+    selected_sample: int,
+):
+    """Sample from N(0,I), plot an 8x8 grid, and record nearest training examples."""
+    data = load_dataset(cfg)
+    X_train = data["X_train"]
+    shape = tuple(data["image_shape"])
+    if not 0 <= selected_sample < n_samples:
+        raise ValueError(f"--selected-sample debe estar entre 0 y {n_samples - 1}.")
+    rng = np.random.default_rng(seed)
+    samples = model.sample(n_samples, rng=rng)
+    nearest = np.empty(n_samples, dtype=int)
+    nearest_mse = np.empty(n_samples, dtype=np.float64)
+    for index, sample in enumerate(samples):
+        distances = np.mean((X_train - sample[None, :]) ** 2, axis=1)
+        nearest[index] = int(np.argmin(distances))
+        nearest_mse[index] = float(distances[nearest[index]])
+    rows = pd.DataFrame({
+        "sample_index": np.arange(n_samples),
+        "nearest_train_index": nearest,
+        "nearest_train_mse": nearest_mse,
+    })
+
+    columns = min(8, n_samples)
+    grid_rows = math.ceil(n_samples / columns)
+    fig, axes = plt.subplots(grid_rows, columns, figsize=(columns * 2, grid_rows * 2), dpi=160, squeeze=False)
+    for index, axis in enumerate(axes.flat):
+        axis.set_axis_off()
+        if index >= n_samples:
+            continue
+        image = samples[index].reshape(shape)
+        if len(shape) == 2:
+            axis.imshow(image, cmap="gray", vmin=0, vmax=1)
+        else:
+            axis.imshow(np.clip(image, 0, 1))
+        axis.set_title(f"#{index} · NN MSE={rows.iloc[index]['nearest_train_mse']:.3f}", fontsize=8)
+    fig.suptitle(f"Muestras del prior N(0,I) · {run_id} · seed={seed}")
+    fig.tight_layout()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    figure_path = output_dir / "prior_samples.png"
+    fig.savefig(figure_path, bbox_inches="tight")
+    plt.close(fig)
+    rows.to_csv(output_dir / "prior_samples_nearest.csv", index=False)
+    np.savez_compressed(output_dir / "prior_samples.npz", samples=samples, nearest_train_index=nearest)
+    selected = np.argsort(nearest_mse)[-min(8, n_samples):]
+    comparison_fig, comparison_axes = plt.subplots(2, len(selected), figsize=(len(selected) * 2, 4), dpi=160, squeeze=False)
+    for column, sample_index in enumerate(selected):
+        source_image = samples[sample_index].reshape(shape)
+        nearest_image = X_train[nearest[sample_index]].reshape(shape)
+        for axis, image in ((comparison_axes[0, column], source_image), (comparison_axes[1, column], nearest_image)):
+            if len(shape) == 2:
+                axis.imshow(image, cmap="gray", vmin=0, vmax=1)
+            else:
+                axis.imshow(np.clip(image, 0, 1))
+            axis.set_xticks([])
+            axis.set_yticks([])
+        comparison_axes[0, column].set_title(f"sample {sample_index}\nMSE={nearest_mse[sample_index]:.3f}", fontsize=8)
+    comparison_axes[0, 0].set_ylabel("Generada")
+    comparison_axes[1, 0].set_ylabel("Vecino train")
+    comparison_fig.suptitle("Muestras con mayor distancia a su vecino de entrenamiento más cercano")
+    comparison_fig.tight_layout()
+    comparison_fig.savefig(output_dir / "prior_samples_nearest_comparison.png", bbox_inches="tight")
+    plt.close(comparison_fig)
+    selected_fig, selected_axes = plt.subplots(1, 2, figsize=(6, 3.5), dpi=180)
+    for axis, image, title in (
+        (selected_axes[0], samples[selected_sample].reshape(shape), f"Muestra generada #{selected_sample}"),
+        (selected_axes[1], X_train[nearest[selected_sample]].reshape(shape), f"Vecino train #{nearest[selected_sample]}"),
+    ):
+        if len(shape) == 2:
+            axis.imshow(image, cmap="gray", vmin=0, vmax=1)
+        else:
+            axis.imshow(np.clip(image, 0, 1))
+        axis.set_title(title)
+        axis.set_xticks([])
+        axis.set_yticks([])
+    selected_axes[0].set_ylabel(f"MSE al vecino={nearest_mse[selected_sample]:.4f}")
+    selected_fig.suptitle("Inspección cualitativa de una muestra del prior")
+    selected_fig.tight_layout()
+    selected_fig.savefig(output_dir / "prior_sample_selected.png", bbox_inches="tight")
+    plt.close(selected_fig)
+    print(f"Muestras generadas: {figure_path}")
 
 
 def plot_point_generation(model, df_latent: pd.DataFrame, z_pt: np.ndarray, out_path: pathlib.Path, run_title: str):
@@ -178,24 +296,36 @@ def plot_interpolation_generation(model, df_latent: pd.DataFrame, c1: str, c2: s
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generar e interpolar letras nuevas desde el espacio latente.")
+    parser = argparse.ArgumentParser(description="Generar e interpolar muestras desde el espacio latente.")
     parser.add_argument("--run", type=str, default=None, help="Directorio o ID de corrida. Usa la mejor por defecto.")
     parser.add_argument("--summary", type=str, default="results/summary/runs.csv", help="Ruta a runs.csv.")
-    parser.add_argument("--mode", type=str, default="all", choices=["point", "midpoint", "interpolate", "all"], help="Modo de generación.")
+    parser.add_argument("--mode", type=str, default="all", choices=["point", "midpoint", "interpolate", "all", "sample"], help="Modo de generación.")
     parser.add_argument("--z", nargs=2, type=float, default=[0.0, 0.0], help="Coordenadas z1 z2 para modo point.")
     parser.add_argument("--char1", type=str, default="c", help="Primer caracter para punto medio / interpolación.")
     parser.add_argument("--char2", type=str, default="o", help="Segundo caracter para punto medio / interpolación.")
     parser.add_argument("--steps", type=int, default=7, help="Cantidad de pasos para interpolación.")
     parser.add_argument("--output-dir", type=str, default="figures/a4", help="Directorio de figuras de salida.")
+    parser.add_argument("--n-samples", type=int, default=64, help="Cantidad de muestras en modo sample (default: 64).")
+    parser.add_argument("--seed", type=int, default=42, help="Semilla del muestreo generativo.")
+    parser.add_argument("--selected-sample", type=int, default=23, help="Índice de muestra a inspeccionar (default: 23).")
     args = parser.parse_args()
 
     out_dir = pathlib.Path(args.output_dir)
+    if args.n_samples < 1:
+        parser.error("--n-samples debe ser positivo.")
+    if not 0 <= args.selected_sample < args.n_samples:
+        parser.error("--selected-sample debe estar dentro de --n-samples.")
 
     # Identificar corrida
     if args.run is None:
-        run_id = find_best_run(pathlib.Path(args.summary))
-        run_dir = pathlib.Path("results/runs") / run_id
-        print(f"Seleccionando automáticamente la mejor corrida: {run_id}")
+        if args.mode == "sample":
+            run_id = find_best_vae_run(pathlib.Path(args.summary), pathlib.Path("results/runs"))
+            run_dir = pathlib.Path("results/runs") / run_id
+            print(f"Seleccionando VAE de sprites con menor val_loss: {run_id}")
+        else:
+            run_id = find_best_run(pathlib.Path(args.summary))
+            run_dir = pathlib.Path("results/runs") / run_id
+            print(f"Seleccionando automáticamente la mejor corrida: {run_id}")
     else:
         run_dir = pathlib.Path(args.run)
         if not run_dir.exists():
@@ -206,6 +336,12 @@ def main():
         run_id = run_dir.name
 
     model, cfg = load_model_from_run(run_dir)
+    if args.mode == "sample":
+        if cfg.get("model", {}).get("type") != "vae" or cfg.get("data", {}).get("dataset") != "sprites":
+            parser.error("El modo sample requiere una corrida VAE entrenada sobre sprites.")
+        plot_prior_samples(model, cfg, run_id, out_dir, args.n_samples, args.seed, args.selected_sample)
+        return
+
     df_latent = load_latent_data(run_dir)
     run_title = f"Run: {run_id} | Arch: {model.arch_str()} | Pérdida: {cfg['loss']['recon'].upper()}"
 

@@ -342,29 +342,34 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 
 ### Parte 2: VAE
 
-**2.a Dataset nuevo.**
+**2.a Dataset de sprites.**
 
-Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del dataset.
+Se usa el dataset ya procesado en `data/processed/sprites.npz`: 790 muestras de entrenamiento y 197 de validación, imágenes RGB de 16×16 (768 features), con split y deduplicación realizados en la Fase 1. Las figuras de esta parte muestran muestras y reconstrucciones desde ese mismo archivo, sin volver a generar los datos.
 
-**2.b Esquema variacional.**
+**2.b Esquema variacional y experimentos.**
 
-- Config `vae_sprites.yaml` (encoder tronco, cabezas `mu`/`logvar`, decoder con salida sigmoide, `recon: bce` o `mse`, `beta`).
-- Experimentos que justifican decisiones (pocos pero informativos):
-  - Barrido de `beta` (por ejemplo 0.1, 0.5, 1, 2): trade-off entre calidad de reconstrucción y regularidad del espacio latente.
-  - Latente 2D (visualizable) frente a 8 o 16 (mejor calidad), para elegir el valor que se usa en la generación.
-  - Con y sin `beta_warmup_epochs`, si se observa colapso posterior.
-- Gráficos (`plot_vae.py`):
-  - Curvas por época de `recon_loss` y `kl_loss` por separado, más la total (diagnostica el balance).
-  - Scatter 2D de `mu` coloreado por alguna propiedad disponible (por ejemplo categoría del sprite, si existe) con las elipses de `sigma` de unos pocos puntos para mostrar la naturaleza probabilística.
-  - Grilla de decodificación del plano latente 2D (cuantiles de la normal) para ver la variedad continua.
-  - Reconstrucciones: fila de originales y fila de reconstruidas (train y val).
-  - Comparación directa AE determinista vs VAE con el mismo dataset: interpolación entre dos puntos en ambos. Es el argumento central de por qué el esquema variacional soluciona el problema del espacio latente.
+- `configs/vae_sprites.yaml` define el VAE de referencia (encoder 256-128, decoder 128-256-768, MSE, Adam, latente 16 y warmup de beta).
+- `configs/sweeps/vae_sprites.yaml` corre un barrido OFAT con semillas 42, 101 y 202: `beta` 0.1/0.5/1/2 para latente 16; dimensiones latentes 2/8/16 con `beta=1`; warmup 0/50 con `beta=1` y latente 16. Tras quitar las combinaciones repetidas quedan 7 condiciones y 21 corridas.
+- `configs/ae_sprites.yaml` y `configs/sweeps/ae_sprites.yaml` entrenan el AE determinista de control con latente 2, misma arquitectura de tronco/decoder y mismas semillas. Permite comparar interpolaciones sobre las mismas imágenes y split.
+- `scripts/plot_vae.py` produce curvas de reconstrucción, KL y pérdida total; trade-off MSE de validación/KL por beta; comparación entre dimensiones latentes; scatter de medias del posterior con elipses ±1σ (color por fila de tileset, no por clase); grilla del decoder 2D; reconstrucciones train/val y comparación AE/VAE de interpolación.
 
-**2.c Generación.**
+**2.c Muestreo e interpolación.**
 
-- `generate.py --mode sample`: muestras `z ~ N(0,I)` pasadas por el decoder, grilla de 8x8 de resultados.
-- Selección de una muestra que los autores juzguen perteneciente al dataset, con el criterio explícito en el informe (por ejemplo: forma coherente, paleta consistente con el dataset, no copia de un ejemplo de entrenamiento).
-- Interpolación entre dos muestras reales como complemento.
+- `scripts/generate.py --mode sample` elige automáticamente el VAE de sprites con menor MSE de validación y genera 64 muestras `z ~ N(0,I)` en una grilla 8×8.
+- Guarda `prior_samples.png`, `prior_samples.npz` y `prior_samples_nearest.csv`; este último informa el MSE del vecino de entrenamiento más cercano para ayudar a juzgar si una muestra es novedosa o una copia aproximada. La selección final de una muestra válida sigue siendo cualitativa y debe explicitarse en el informe.
+- `figures/vae/Explicación.md` describe las figuras, metodología, resultados cuantitativos, límites y el criterio de inspección cualitativa de la muestra #23.
+- La interpolación AE/VAE con el mismo par de sprites se genera en `ae_vae_interpolation.png`.
+
+**Ejecución completa desde la raíz del repositorio** (el `.npz` existente no requiere regeneración):
+
+```bash
+python scripts/sweep.py --sweep configs/sweeps/ae_sprites.yaml
+python scripts/sweep.py --sweep configs/sweeps/vae_sprites.yaml
+python scripts/plot_vae.py --summary results/summary/runs.csv --runs-dir results/runs \
+  --data data/processed/sprites.npz --output-dir figures/vae
+python scripts/generate.py --mode sample --summary results/summary/runs.csv \
+  --output-dir figures/vae --n-samples 64 --seed 42 --selected-sample 23
+```
 
 ---
 
@@ -378,9 +383,9 @@ Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del data
 | 1.a.4 | `generate.py` | letras nuevas e interpolación | Evaluación crítica |
 | 1.b.1 | `noise_eval.py`, resultados de 1.a.2 | `shortlist.csv` | Selección de configuraciones AE/DAE/VAE |
 | 1.b.2 | `noise_eval.py` | `low_noise_eval.csv`, `shortlist.csv`, `noise_eval.csv`, curvas, heatmaps y grillas | Capacidad de eliminar ruido y comparación AE/DAE/VAE |
-| 2.a | `sprites.py` | `sprites.npz`, grilla | Descripción del dataset |
-| 2.b | `vae_sprites.yaml`, barridos de beta y latente, `plot_vae.py` | curvas recon/KL, grilla latente | Cómo el esquema variacional resuelve el problema |
-| 2.c | `generate.py --mode sample` | muestras, interpolaciones, vecino más cercano | Muestra elegida y criterio |
+| 2.a | `data/processed/sprites.npz` | 790 train, 197 val, RGB 16×16 | Descripción del dataset |
+| 2.b | `sweeps/{ae,vae}_sprites.yaml`, `plot_vae.py` | curvas, trade-off β, dimensión, posterior, manifold, reconstrucción e interpolación | Efectos de β/dimensión/warmup y diferencia AE/VAE |
+| 2.c | `generate.py --mode sample` | grilla 8×8, NPZ y distancias a vecino más cercano | Muestra elegida, realismo y novedad |
 
 ## 5. Orden de implementación e hitos
 
@@ -390,8 +395,7 @@ Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del data
 5. **Hito 4 (parte 1.b):** DAE, evaluación de ruido, gráficos.
 6. **Hito 5 (VAE):** reparametrización, KL, gradient check del VAE completo, experimentos de beta y dimensión, generación.
 
-### PROMPTS PENDIENTES
-#### DAE
-pasemos a los puntos 1.b.- del PLAN.md tenes las fases anteriores descritas en hitos. Me parece que la manera de evaluar las arquitecturas deberia ser a partir de elegir un top 10 de mejores arquitecturas (probando tambien AEs para ver diferencias con VAE) segun como les fue con flip y bajo ruido y a esas si exponerlas a mas ruido tanto flip como mask. Deberia generar suficientes graficos como para que pueda definir cuales toleraban mejor los distintos ruidos. Usa las variaciones que se evaluaron tambien en el 1.a.2. Decime al final que correr para preparar los datos y hacer los graficos. 
-#### VAE 
-terminemos el TP y pasemos a los puntos 2.- del PLAN.md tenes las fases anteriores descritas en hitos. El dataset ya esta armado en data/processed/sprites.
+### Solicitudes completadas
+
+- **DAE (1.b):** se implementó la evaluación de robustez ante `flip` y `mask`, con selección de configuraciones, comparaciones AE/DAE/VAE y gráficos documentados en `figures/b/`.
+- **VAE (2):** se completaron los sweeps, análisis visual, muestreo del prior e informe de resultados en `figures/vae/Explicación.md`.

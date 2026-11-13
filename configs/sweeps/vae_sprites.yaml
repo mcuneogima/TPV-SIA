@@ -1,0 +1,9 @@
+# OFAT experiments: beta, latent dimension, and beta warmup on the processed sprites.
+base: configs/vae_sprites.yaml
+mode: ofat
+seeds: [42, 101, 202]
+
+grid:
+  loss.beta: [0.1, 0.5, 1.0, 2.0]
+  model.latent_dim: [2, 8, 16]
+  loss.beta_warmup_epochs: [0, 50]
