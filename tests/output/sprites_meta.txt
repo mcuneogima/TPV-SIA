@@ -3,8 +3,8 @@ PNG fuente  : C:\Users\Matias Cuneo Gima\ITBA\SIA\TPV-SIA\data\raw\sprites\tiles
 TSX fuente  : C:\Users\Matias Cuneo Gima\ITBA\SIA\TPV-SIA\data\raw\sprites\tileset_colored.tsx
 Canales     : rgb
 Tile shape  : (16, 16, 3)  (768 features)
-n_train     : 790
-n_val       : 197
-Dedup       : True  (antes=988, después=987)
+n_train     : 26
+n_val       : 6
+Dedup       : True  (antes=32, después=32)
 Val split   : 0.2  (seed=412)
 Color fondo : [0.2800000011920929, 0.18000000715255737, 0.23999999463558197]

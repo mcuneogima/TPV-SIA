@@ -131,8 +131,8 @@ def test_sprites():
     for p in [tsx, png]:
         if not p.exists():
             _fail(f"No se encontró: {p}")
-
-    data = load_sprites(str(tsx), str(png), channels="rgb", val_split=0.2, seed=412, dedup=True)
+    # se puede cambiar la region a gusto
+    data = load_sprites(str(tsx), str(png), channels="rgb", val_split=0.2, seed=412, dedup=True, regions=[{"name": "animales", "rows": [5, 8], "cols": [24, 31]}])
 
     X_train = data["X_train"]
     X_val   = data["X_val"]
@@ -242,7 +242,7 @@ def test_loader():
     _ok(f"Font con val_split 0.2: train={ds2['X_train'].shape[0]}, val={ds2['X_val'].shape[0]}")
 
     # sprites
-    cfg3 = {"data": {"dataset": "sprites", "path": "data/processed/sprites.npz"}}
+    cfg3 = {"data": {"dataset": "sprites", "path": "data/processed/sprites.npz", "regions": [{"name": "animales", "rows": [5, 8], "cols": [24, 31]}]}}
     ds3 = load_dataset(cfg3)
     assert ds3["X_train"].ndim == 2
     _ok(f"Sprites loader: X_train {ds3['X_train'].shape}, X_val {ds3['X_val'].shape}")

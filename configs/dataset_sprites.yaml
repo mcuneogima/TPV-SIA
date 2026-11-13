@@ -9,6 +9,7 @@ data:
   channels: rgb            # rgb | gray
   regions:                 # dejar vacío para usar todos los tiles no-fondo
     # Descomentá y ajustá tras ver figures/data/contact_sheet.png
+    - {name: animales, rows: [5, 8], cols: [24, 31]}
     # - {name: personajes, rows: [0, 10], cols: [24, 31]}
     # - {name: objetos,    rows: [0,  5], cols: [0,  10]}
   dedup: true

@@ -321,22 +321,21 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 
 **1.b.1 Arquitectura y justificación.**
 
-- Config `dae.yaml`. Hipótesis a justificar: latente más grande que 2 (por ejemplo 8 a 16) porque el cuello de 2D limita la capacidad de corregir ruido, y encoders con algo más de ancho. Se entrena con ruido regenerado en cada época y pérdida contra la entrada limpia.
-- Experimento corto de comparación para justificar la elección: DAE con latente 2, 8 y 16 (mismas condiciones), midiendo error de reconstrucción sobre entradas ruidosas.
+- Experimento de comparación para justificar la elección: DAE, midiendo error de reconstrucción sobre entradas ruidosas segun hiperparametros y ruido.
 
 **1.b.2 Estudio del efecto del ruido.**
 
-- Dos ejes: nivel de ruido en entrenamiento (por ejemplo 0.05, 0.1, 0.2) y nivel en test (0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5), con muchos ensayos por nivel (por ejemplo 100 corrupciones por patrón) para estimaciones estables.
+- Dos ejes: nivel de ruido en entrenamiento (por ejemplo 0.05, 0.1, 0.2) y nivel en test (0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
 - Script `noise_eval.py` calcula y escribe `noise_eval.csv`; `plot_denoise.py` produce:
-  - Curva de píxeles erróneos promedio vs nivel de ruido, comparando entrada ruidosa sin procesar, salida del AE básico y salida del DAE (mide el aporte real del denoising).
-  - Curva de fracción de patrones recuperados exactamente vs nivel de ruido.
-  - Mapa de calor entrenado en nivel A y evaluado en nivel B.
+  - Curva de caracteres OK promedio vs nivel de ruido, comparando entrada ruidosa sin procesar, salida del AE básico y salida del DAE (mide el aporte real del denoising).
   - Grilla visual por nivel de ruido: original, ruidosa, reconstruida (con 4 o 5 letras).
   - Comparación `flip` vs `mask`.
 
 ### Parte 2: VAE
 
-**2.a Dataset nuevo.** Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del dataset y distribución de colores si es relevante.
+**2.a Dataset nuevo.**
+
+Sprites preprocesados en la Fase 1. Gráfico previo: grilla de muestras del dataset.
 
 **2.b Esquema variacional.**
 
@@ -356,7 +355,6 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 
 - `generate.py --mode sample`: muestras `z ~ N(0,I)` pasadas por el decoder, grilla de 8x8 de resultados.
 - Selección de una muestra que los autores juzguen perteneciente al dataset, con el criterio explícito en el informe (por ejemplo: forma coherente, paleta consistente con el dataset, no copia de un ejemplo de entrenamiento).
-- Chequeo anti-memorización: distancia (MSE) de la muestra elegida al ejemplo de entrenamiento más cercano, y mostrar ambos lado a lado.
 - Interpolación entre dos muestras reales como complemento.
 
 ---
@@ -382,3 +380,9 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 4. **Hito 3 (parte 1.a):** sweep escalonado, gráficos de a.2, latente, generación.
 5. **Hito 4 (parte 1.b):** DAE, evaluación de ruido, gráficos.
 6. **Hito 5 (VAE):** reparametrización, KL, gradient check del VAE completo, experimentos de beta y dimensión, generación.
+
+### PROMPTS PENDIENTES
+#### DAE
+pasemos a los puntos 1.b.- del PLAN.md tenes las fases anteriores descritas en hitos. Me parece que la manera de evaluar las arquitecturas deberia ser a partir de elegir un top 10 de mejores arquitecturas (probando tambien AEs para ver diferencias con VAE) segun como les fue con flip y bajo ruido y a esas si exponerlas a mas ruido tanto flip como mask. Deberia generar suficientes graficos como para que pueda definir cuales toleraban mejor los distintos ruidos. Usa las variaciones que se evaluaron tambien en el 1.a.2. Decime al final que correr para preparar los datos y hacer los graficos. 
+#### VAE 
+terminemos el TP y pasemos a los puntos 2.- del PLAN.md tenes las fases anteriores descritas en hitos. El dataset ya esta armado en data/processed/sprites.
