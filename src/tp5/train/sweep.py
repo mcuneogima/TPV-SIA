@@ -46,24 +46,34 @@ def expand_sweep_grid(sweep_cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     all_configs: List[Dict[str, Any]] = []
 
     # Producto cartesiano de los ejes
-    combos = list(itertools.product(*grid_values)) if grid_values else [()]
+    #combos = list(itertools.product(*grid_values)) if grid_values else [()]
 
-    for combo in combos:
-        for seed in seeds:
-            cfg = copy.deepcopy(base_cfg)
-            cfg["seed"] = int(seed)
+    #for combo in combos:
+    #    for seed in seeds:
+    #        cfg = copy.deepcopy(base_cfg)
+    #        cfg["seed"] = int(seed)
 
-            for key, val in zip(grid_keys, combo):
-                # Resolver si el valor es una referencia a una variante
-                if isinstance(val, str) and val in variants:
-                    resolved_val = copy.deepcopy(variants[val])
-                else:
-                    resolved_val = val
+    #        for key, val in zip(grid_keys, combo):
+    #            # Resolver si el valor es una referencia a una variante
+    #            if isinstance(val, str) and val in variants:
+    #                resolved_val = copy.deepcopy(variants[val])
+    #            else:
+    #                resolved_val = val
 
-                set_dotted_key(cfg, key, resolved_val)
+    #            set_dotted_key(cfg, key, resolved_val)
 
-            all_configs.append(cfg)
+    #        all_configs.append(cfg)
+    #
 
+    for key in grid_keys:
+        for val in grid[key]:
+            for seed in seeds:
+                cfg = copy.deepcopy(base_cfg)
+                cfg["seed"] = int(seed)
+                resolved = copy.deepcopy(variants[val]) if isinstance(val, str) and val in variants else val
+                set_dotted_key(cfg, key, resolved)
+                all_configs.append(cfg)
+                
     return all_configs
 
 

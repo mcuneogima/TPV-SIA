@@ -15,7 +15,7 @@
 base: configs/ae_basic.yaml
 
 # Una sola semilla para el screening. Para finalistas usar [1, 2, 3].
-seeds: [1]
+seeds: [1, 2, 3]
 
 grid:
   # --- Optimizador y learning rate -----------------------------------------
@@ -50,7 +50,7 @@ grid:
 
   # Ejes de un solo valor: sobreescriben el base sin multiplicar corridas.
   # Menos épocas para el screening; las finalistas se re-entrenan con 20000.
-  train.epochs: [5000]
+  train.epochs: [10000]
   train.eval_every: [50]
 
   # --- Ejes opcionales (cada uno duplica el total de corridas) --------------

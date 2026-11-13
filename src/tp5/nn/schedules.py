@@ -63,19 +63,13 @@ SCHEDULES = {
 }
 
 
+import inspect
+
 def build_schedule(cfg_opt: Dict[str, Any]) -> LRScheduler:
-    """
-    Construye un scheduler a partir del bloque de configuración del optimizador.
-    
-    Ejemplo YAML:
-      optimizer:
-        lr: 0.001
-        schedule: {name: exp_decay, gamma: 0.9995}
-    """
     base_lr = float(cfg_opt.get("lr", 0.001))
     sched_info = cfg_opt.get("schedule", None)
 
-    if sched_info is None or not sched_info:
+    if not sched_info:
         return ConstantSchedule(base_lr)
 
     if isinstance(sched_info, str):
@@ -94,4 +88,9 @@ def build_schedule(cfg_opt: Dict[str, Any]) -> LRScheduler:
             f"Opciones: {list(SCHEDULES.keys())}"
         )
 
-    return SCHEDULES[name_clean](initial_lr=base_lr, **sched_params)
+    cls = SCHEDULES[name_clean]
+    # Quedarse solo con los parámetros que el constructor realmente acepta
+    accepted = set(inspect.signature(cls.__init__).parameters) - {"self", "initial_lr"}
+    sched_params = {k: v for k, v in sched_params.items() if k in accepted}
+
+    return cls(initial_lr=base_lr, **sched_params)
