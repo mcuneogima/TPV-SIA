@@ -1,0 +1,45 @@
+run_name: ae_sprites_animals_control
+seed: 42
+
+data:
+  dataset: sprites
+  path: data/processed/sprites_animals.npz
+  val_split: 0.2
+
+model:
+  type: autoencoder
+  latent_dim: 2
+  encoder:
+    layers:
+      - {units: 256, activation: relu}
+      - {units: 128, activation: relu}
+      - {units: 2, activation: identity}
+  decoder:
+    layers:
+      - {units: 128, activation: relu}
+      - {units: 256, activation: relu}
+      - {units: 768, activation: sigmoid}
+  init: he
+
+loss:
+  recon: mse
+
+optimizer:
+  name: adam
+  lr: 0.0005
+  momentum: 0.9
+  beta1: 0.9
+  beta2: 0.999
+  schedule: {name: exp_decay, gamma: 0.999}
+  grad_clip: 5.0
+
+train:
+  epochs: 500
+  batch_size: 64
+  eval_every: 10
+  early_stop: null
+
+output:
+  dir: results/sprites_animals/runs
+  summary_dir: results/sprites_animals/summary
+  save_weights: true

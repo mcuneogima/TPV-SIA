@@ -2,13 +2,16 @@ import pathlib
 import sys
 
 import numpy as np
+import pandas as pd
 import pytest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from tp5.analysis.noise_eval import evaluate_noise_levels, reconstruction_metrics
 from tp5.train.sweep import expand_sweep_grid
+from noise_eval import CONFIG_COLUMNS, _rank_candidates
 
 
 def test_reconstruction_metrics_count_pattern_error_threshold():
@@ -37,6 +40,30 @@ def test_noise_evaluation_is_reproducible_and_tests_clean_targets():
     assert all("frac_ok" in result for result in first)
     noisy_baseline = evaluate_noise_levels(None, clean, "flip", [0.2], 1, seed=7)
     assert noisy_baseline[0]["mean_pixel_errors"] >= 0.0
+
+
+def test_screening_ranks_dae_results_not_ae_contrast():
+    rows = []
+    for run_id, source_id, model_type, arch, score in (
+        ("ae-1", "source-1", "autoencoder", "small", 1.0),
+        ("dae-1", "source-1", "denoising", "small", 0.2),
+        ("ae-2", "source-2", "autoencoder", "medium", 0.0),
+        ("dae-2", "source-2", "denoising", "medium", 0.8),
+    ):
+        rows.append({
+            "run_id": run_id,
+            "source_run_id": source_id,
+            "model_type": model_type,
+            "arch": arch,
+            "frac_ok": score,
+            "mean_pixel_errors": 1.0 - score,
+            **{column: "fixed" for column in CONFIG_COLUMNS if column != "arch"},
+        })
+
+    ranked = _rank_candidates(pd.DataFrame(rows), top_n=1)
+
+    assert ranked.iloc[0]["arch"] == "medium"
+    assert ranked.iloc[0]["source_run_ids"] == '["source-2"]'
 
 
 def test_sweep_cartesian_and_ofat_modes_expand_expected_variants(tmp_path):

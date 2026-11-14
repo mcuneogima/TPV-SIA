@@ -1,124 +1,119 @@
 # Informe de resultados: Denoising Autoencoder (Parte 1.b)
 
-## Resumen
+## Metodología revisada
 
-Se evaluó la robustez de autoencoders sobre los 32 caracteres de `font.h`, representados como imágenes binarias de 7 × 5 píxeles. El estudio parte de las variaciones de hiperparámetros de 1.a.2 y compara tres modelos: el AE entrenado sin ruido, un DAE y un VAE de referencia entrenados con ruido `flip`.
+Se trabajó con los 32 patrones binarios de `font.h`, de 7×5 píxeles. El screening de 1.a.2 aportó **16 configuraciones únicas y tres semillas**. Se entrenó un DAE para cada una de las 48 corridas fuente, con los mismos hiperparámetros y `flip=0.1`; la pérdida compara la salida con el patrón limpio.
 
-El screening inicial contiene **48 corridas AE** (16 configuraciones y 3 semillas). Se seleccionaron las 10 configuraciones con mejor reconstrucción a bajo ruido. Para cada finalista se entrenaron **3 semillas de DAE y 3 de VAE**, todas durante 10.000 épocas: 30 corridas por tipo, 60 en total. Las 60 finalizaron con estado `ok`.
+El **Top 10 se seleccionó directamente por el desempeño de los DAEs**: media de la fracción de patrones OK ante `flip` y `mask` a niveles 0.05 y 0.1, promediada entre semillas y corrupciones. Los AE de origen se evaluaron también, pero sólo como comparación pareada. **No se usaron VAEs en 1.b.**
 
-Los modelos se evaluaron con ruido de prueba `flip` y `mask` en niveles 0, 0.05, 0.1, 0.2, 0.3, 0.4 y 0.5. Se usaron 10 corrupciones reproducibles por nivel. `noise_eval.csv` contiene **16.800 observaciones**: 10 configuraciones × 3 semillas × 2 ruidos × 7 niveles × 10 pruebas × 4 referencias (entrada ruidosa, AE, DAE y VAE).
+Los 10 finalistas (30 DAEs) y sus 30 AE de referencia se evaluaron con ambos ruidos en niveles 0, 0.05, 0.1, 0.2, 0.3, 0.4 y 0.5, con 10 corrupciones reproducibles por nivel. `noise_eval.csv` contiene **12.600 registros**: 10 configuraciones × 3 semillas × 2 ruidos × 7 niveles × 10 pruebas × 3 referencias (entrada ruidosa, AE y DAE).
 
-Para las comparaciones, cada DAE conservó los hiperparámetros y la semilla del AE finalista, y se entrenó con `flip=0.1` contra el patrón limpio. El VAE usó el mismo dataset, semilla y cuello latente de 2 dimensiones; la última capa latente determinista se reemplazó por las cabezas `mu` y `logvar`, con `beta=1` y warmup de 100 épocas.
+## Métricas y alcance
 
-## Cómo leer las métricas
+- **Patrón OK:** como máximo 1 píxel diferente del original, después de umbralizar la salida en 0.5.
+- **Error medio:** promedio de píxeles distintos por patrón.
+- El ranking promedia la fracción de patrones OK en los cuatro casos de bajo ruido. La desviación se calcula entre semillas.
+- La referencia **Entrada ruidosa** evalúa directamente la corrupción, sin pasar por un modelo.
+- Los 32 patrones de `font.h` se usaron tanto para entrenamiento como para esta evaluación. Las corrupciones son independientes y reproducibles, pero no constituyen una prueba de generalización a letras no vistas.
 
-- **Patrón OK**: carácter reconstruido con como máximo 1 píxel distinto del original, luego de umbralizar la salida en 0.5.
-- **Fracción de patrones OK**: proporción de los 32 caracteres que cumplen ese criterio. En las gráficas se muestra entre 0 y 1.
-- **Error medio**: promedio de píxeles distintos por carácter.
-- Las curvas resumen las 10 configuraciones finalistas y sus semillas; las bandas muestran ±1 desvío estándar. Los mapas de calor desglosan el resultado por ranking.
-- La referencia **Entrada ruidosa** no aplica un modelo: compara directamente el patrón corrompido contra el original. Sirve para medir si reconstruir aporta una mejora real.
-- Las salidas de AE/DAE/VAE son probabilidades por píxel. Las imágenes pueden verse grises; las métricas se calculan después del umbral 0.5.
+## Selección directa de configuraciones DAE
 
-## Selección de las 10 configuraciones
+![Ranking de configuraciones por rendimiento DAE a bajo ruido](./low_noise_ranking.png)
 
-El ranking promedia la fracción de patrones OK ante `flip` y `mask` con niveles bajos 0.05 y 0.1, y luego promedia las 3 semillas. La desviación se expresa en puntos porcentuales.
+| Puesto | Arquitectura | Activación | Pérdida | Optimizador, LR, schedule | Inicialización / batch | Fracción OK DAE |
+|---:|---|---|---|---|---|---:|
+| 1 | Medium | tanh | BCE | Adam, 0.01, exp_decay | Xavier / full | 84.9% ± 10.1 pp |
+| 2 | Medium | tanh | BCE | Adam, 0.001, constant | Xavier / full | 76.9% ± 5.3 pp |
+| 3 | Medium | tanh | BCE | Adam, 0.001, exp_decay | Xavier / 8 | 26.1% ± 3.7 pp |
+| 4 | Medium | tanh | MSE | Adam, 0.001, exp_decay | Xavier / full | 21.0% ± 3.4 pp |
+| 5 | Medium | tanh | BCE | Adam, 0.001, exp_decay | He / full | 20.7% ± 5.9 pp |
+| 6 | Deep | tanh | BCE | Adam, 0.001, exp_decay | Xavier / full | 19.3% ± 0.9 pp |
+| 7 | Medium | leaky ReLU | BCE | Adam, 0.001, exp_decay | Xavier / full | 17.3% ± 6.3 pp |
+| 8 | Medium | tanh | BCE | Adam, 0.001, exp_decay | Xavier / full | 17.0% ± 4.4 pp |
+| 9 | Medium | ReLU | BCE | Adam, 0.001, exp_decay | Xavier / full | 16.7% ± 5.4 pp |
+| 10 | Medium | tanh | BCE | RMSprop, 0.001, exp_decay | Xavier / full | 15.0% ± 1.2 pp |
 
-| Puesto | Arquitectura | Activación | Pérdida | Optimizador, LR y schedule | Inicialización / batch | OK promedio | Desvío |
-|---:|---|---|---|---|---|---:|---:|
-| 1 | Medium | tanh | BCE | Adam, 0.01, exp_decay | Xavier / full | 52.34% | 2.47 pp |
-| 2 | Medium | tanh | BCE | Adam, 0.001, exp_decay | He / full | 44.58% | 2.15 pp |
-| 3 | Medium | tanh | BCE | Adam, 0.001, exp_decay | Xavier / 8 | 44.43% | 2.64 pp |
-| 4 | Medium | tanh | BCE | Adam, 0.001, constant | Xavier / full | 44.35% | 2.79 pp |
-| 5 | Medium | sigmoid | BCE | Adam, 0.001, exp_decay | Xavier / full | 43.05% | 2.31 pp |
-| 6 | Medium | leaky ReLU | BCE | Adam, 0.001, exp_decay | Xavier / full | 41.33% | 1.36 pp |
-| 7 | Medium | tanh | BCE | Adam, 0.001, exp_decay | Xavier / full | 40.13% | 3.67 pp |
-| 8 | Medium | ReLU | BCE | Adam, 0.001, exp_decay | Xavier / full | 40.08% | 0.21 pp |
-| 9 | Medium | tanh | MSE | Adam, 0.001, exp_decay | Xavier / full | 39.51% | 2.55 pp |
-| 10 | Small | tanh | BCE | Adam, 0.001, exp_decay | Xavier / full | 39.14% | 3.21 pp |
+Medium corresponde a `35-24-12-2-12-24-35`; Deep a `35-30-20-10-2-12-24-35`. La brecha entre el Top 2 y el resto es marcada: el comportamiento de un DAE no se predice bien sólo a partir del AE que comparte su configuración. [`shortlist.csv`](../../results/denoising/shortlist.csv) contiene los identificadores de origen y todas las métricas.
 
-Las 10 mejores configuraciones provienen principalmente de la arquitectura Medium y usan Adam. La mejor fue Medium/tanh/BCE con `lr=0.01` y `exp_decay`, con 52.34% de patrones OK a bajo ruido. La tabla completa, incluyendo los identificadores de las tres corridas fuente, está en [`shortlist.csv`](../../results/denoising/shortlist.csv).
+## ¿Por qué el DAE parece rendir peor que el AE?
 
-En esta tabla, Medium corresponde a `35-24-12-2-12-24-35`; Small corresponde a `35-16-2-12-24-35`.
+La respuesta depende del nivel de ruido y de la métrica:
 
-### Ranking de bajo ruido
+1. **Se sacrifica reconstrucción exacta en limpio.** En el conjunto finalista, a nivel 0 el AE logra 93.1% de patrones OK y 0.32 píxeles de error medio; el DAE, 33.6% y 3.31 píxeles. El DAE se entrena para reconstruir desde una entrada alterada, no para memorizar la identidad exacta `x → x`; su objetivo cambia intencionalmente.
+2. **El criterio “OK” es muy estricto.** Cuenta como fallo una salida con dos píxeles incorrectos, aunque visualmente sea casi idéntica. Por eso también se informa el error medio, que muestra mejoras del DAE incluso cuando la fracción OK es menor.
+3. **La shortlist anterior usaba el AE como proxy.** Eso favorecía candidatos que funcionaban bien como AE, no necesariamente como DAE. La metodología corregida entrena y evalúa DAEs para elegir el Top 10; el AE sólo queda como control pareado.
+4. **El ruido de entrenamiento no cubre todos los ruidos de prueba.** Se entrena con `flip=0.1`; `mask` mide transferencia a otra corrupción, no optimizada directamente.
+5. **El problema es pequeño y el cuello de botella es 2D.** Sólo hay 32 patrones. El resultado depende sensiblemente de la configuración y de la semilla; el agregado del Top 10 oculta que los dos primeros puestos son mucho mejores que los siguientes.
 
-![Ranking de las configuraciones finalistas](./low_noise_ranking.png)
+Así, “peor que el AE” describe principalmente la reconstrucción sin ruido y, en `mask` bajo, la fracción de caracteres que cae dentro del umbral de un píxel. **No significa que el DAE no aprenda a quitar ruido:** a `flip=0.1`, por ejemplo, su promedio es 28.8% OK y 3.94 píxeles de error, frente a 18.4% y 9.21 píxeles del AE.
 
-Cada barra es el promedio ante los cuatro casos de bajo ruido (`flip`/`mask` en 0.05/0.1). Las barras de error reflejan variación entre semillas. El ranking se usa para elegir candidatos, no predice por sí solo cuál DAE será mejor: el entrenamiento con ruido cambia el comportamiento de cada configuración, como muestran los mapas de calor.
-
-## Curvas de robustez
+## Robustez promedio
 
 ### Ruido `flip`
 
-![Robustez ante ruido flip](./robustness_flip.png)
+![Comparación AE/DAE ante flip](./robustness_flip.png)
 
-En promedio sobre las 10 configuraciones, con `flip=0.1` el DAE logra **27.2%** de patrones OK, frente a 18.5% del AE, 17.0% del VAE y 12.8% de la entrada sin procesar. En `flip=0.2`, el DAE conserva la ventaja (15.6%, comparado con 9.2% AE, 10.1% VAE y 0.4% entrada).
+| Nivel | Entrada ruidosa OK | AE OK | DAE OK | Error medio AE | Error medio DAE |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | 47.1% | 34.9% | 32.2% | 6.76 | 3.48 |
+| 0.1 | 12.8% | 18.4% | **28.8%** | 9.21 | **3.94** |
+| 0.2 | 0.4% | 8.3% | **16.6%** | 11.79 | **6.09** |
+| 0.3 | 0.0% | 4.3% | **6.4%** | 13.75 | **9.25** |
+| 0.5 | 0.0% | 1.2% | 0.7% | 16.82 | **14.15** |
 
-La ventaja no se mantiene igual en todos los niveles. En `flip=0.05`, la entrada sin procesar alcanza 47.1% de patrones OK y supera al promedio DAE (30.5%); a niveles 0.4–0.5 la fracción de patrones OK de todos los modelos se acerca a cero. Aunque el error medio del DAE sigue siendo menor que el del AE en esos niveles altos, ya casi ningún carácter satisface el umbral estricto de 1 píxel.
+El DAE supera al AE en bajo error para niveles moderados (0.1–0.3), pero a 0.05 la entrada sin procesar conserva más patrones dentro del umbral estricto. En 0.5, ninguno recupera muchos patrones completos, aunque el DAE reduce el error medio.
 
 ### Ruido `mask`
 
-![Robustez ante ruido mask](./robustness_mask.png)
+![Comparación AE/DAE ante mask](./robustness_mask.png)
 
-Con `mask` bajo, la entrada sin procesar y el AE superan al promedio de los DAE en fracción OK: a nivel 0.1 obtienen 68.8% y 49.8%, respectivamente, frente a 30.9% del DAE. Desde nivel 0.3, el DAE queda ligeramente por encima en fracción OK (21.1% frente a 20.0% AE y 15.8% entrada); a nivel 0.5 la diferencia entre DAE y AE es pequeña (11.6% y 11.4%).
+| Nivel | Entrada ruidosa OK | AE OK | DAE OK | Error medio AE | Error medio DAE |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | 88.5% | 66.0% | 33.3% | 3.08 | 3.36 |
+| 0.1 | 68.8% | 48.4% | 32.2% | 4.97 | **3.45** |
+| 0.2 | 34.9% | 28.9% | 28.3% | 7.29 | **3.94** |
+| 0.3 | 15.8% | 19.9% | **22.5%** | 8.69 | **4.89** |
+| 0.5 | 3.2% | 10.9% | **11.9%** | 10.43 | **7.46** |
 
-El error medio aporta otra perspectiva: desde `mask=0.1`, el DAE tiene menor error medio que el AE (3.68 frente a 4.91 píxeles en 0.1; 7.69 frente a 10.41 en 0.5). La entrada sin procesar puede conservar un error medio bajo porque `mask` sólo convierte píxeles en cero, pero eso no implica que reconstruya bien los caracteres completos.
+El DAE no es una mejora uniforme para `mask`: a niveles bajos el AE o incluso la entrada sin procesar obtienen más patrones OK, mientras que a niveles medios/altos el DAE supera levemente al AE y reduce el error medio.
 
-## Mapas de calor por configuración
+## Variación por configuración
 
-Cada fila es una configuración del ranking y cada celda indica su fracción de patrones OK. La primera columna es la entrada ruidosa; las siguientes muestran AE, DAE y VAE. Los mapas permiten ver la variabilidad que queda oculta en las curvas promedio.
+![Mapa de calor de resultados por DAE ante flip](./heatmap_flip.png)
 
-### `flip`
+![Mapa de calor de resultados por DAE ante mask](./heatmap_mask.png)
 
-![Mapa de calor flip](./heatmap_flip.png)
+El Top 1 es el candidato más consistente: a `flip=0.1` obtiene 80.5% de patrones OK; a `mask=0.1`, 85.9%; y conserva 36.7% OK incluso en `mask=0.5`. El Top 2 también es fuerte en ruido moderado (68.3% OK en `flip=0.1`, 79.2% en `mask=0.1`). Los puestos inferiores muestran por qué era necesario rankear los propios DAEs.
 
-La configuración Top 1 destaca: su DAE mantiene 80.5% de patrones OK en `flip=0.1`, 48.1% en 0.2 y 18.4% en 0.3. Top 4 también es relativamente resistente (69.3%, 38.8% y 15.5% en esos niveles). La mayoría de las otras configuraciones cae mucho antes; por eso no conviene interpretar el promedio como si todos los DAE fueran igualmente robustos.
+![Ejemplos cualitativos de reconstrucción con flip](./examples_flip.png)
 
-### `mask`
+![Ejemplos cualitativos de reconstrucción con mask](./examples_mask.png)
 
-![Mapa de calor mask](./heatmap_mask.png)
-
-El DAE Top 1 obtiene 85.9% de patrones OK en `mask=0.1`, 67.6% en 0.3 y 36.7% en 0.5. Top 4 es el segundo candidato destacado: 79.6%, 56.0% y 31.4% en esos niveles. En los demás puestos hay variación importante y varios modelos pierden precisión incluso con poco ruido.
-
-## Ejemplos cualitativos
-
-Las columnas muestran niveles crecientes (0.1, 0.3 y 0.5); las filas comparan originales, entradas ruidosas y reconstrucciones de AE, DAE y VAE para una muestra del Top 1. Son ejemplos ilustrativos, no promedios estadísticos.
-
-### `flip`
-
-![Ejemplos de reconstrucción con flip](./examples_flip.png)
-
-Al aumentar `flip`, la entrada queda muy alterada. El DAE conserva mejor la estructura en los niveles intermedios que el AE de referencia, aunque a 0.5 también pierde legibilidad. El VAE produce salidas más suaves, pero no recupera todos los caracteres correctamente.
-
-### `mask`
-
-![Ejemplos de reconstrucción con mask](./examples_mask.png)
-
-El DAE y el VAE pueden recuperar partes que fueron ocultadas, especialmente en niveles intermedios. El resultado depende del carácter y del ruido concreto; el Top 1 del DAE es el que mejor se sostiene en el mapa de calor agregado.
+Las imágenes corresponden al Top 1 y son ejemplos ilustrativos; las tablas y los mapas agregan semillas y corrupciones distintas.
 
 ## Conclusiones
 
-1. **La mejor configuración de bajo ruido también fue una buena base para DAE**, pero no todos los finalistas conservaron esa robustez después de entrenarse con ruido. Top 1 y Top 4 fueron los DAE más resistentes; los demás tuvieron resultados bastante inferiores.
-2. **El DAE favorece la reconstrucción bajo `flip` moderado**, particularmente entre 0.1 y 0.3. Bajo `mask`, la mejora sobre el AE aparece sobre todo en niveles altos y depende de la configuración.
-3. **Existe un compromiso con la reconstrucción limpia**: en el promedio de finalistas a nivel 0, el AE obtiene 95.2% OK y 0.23 píxeles de error medio; el DAE, 32.1% y 3.48 píxeles; el VAE, 20.5% y 4.82 píxeles. Al entrenarse para denoising, parte de la fidelidad en limpio se sacrifica.
-4. **El VAE de referencia no supera en promedio al DAE/AE en este conjunto binario pequeño**, aunque en el Top 1 mantiene resultados competitivos bajo ruido moderado. Es una comparación sobre `font.h`; no reemplaza los experimentos de VAE con sprites de la Parte 2.
-5. Si se debe elegir una configuración para denoising, **Top 1 es la recomendación principal** y **Top 4 una alternativa**. La decisión depende del ruido esperado: Top 1 es notablemente fuerte ante `mask` y conserva ventaja ante `flip` moderado.
+1. El Top 10 se define ahora por resultados DAE, mientras el AE aporta el contraste pedido.
+2. El DAE paga un costo claro en reconstrucción limpia, pero mejora tanto la fracción OK como el error promedio frente al AE en `flip` moderado.
+3. Ante `mask`, la mejora depende del nivel: aparece principalmente a niveles medios/altos. La entrada sin procesar ya es una referencia competitiva con `mask` bajo.
+4. El Top 1 es una recomendación fuerte para estas condiciones; no debe generalizarse a otras tasas de ruido, datasets o semillas sin una evaluación adicional.
 
-## Archivos de resultados y reproducción
+## Artefactos y reproducción
 
-- [`low_noise_eval.csv`](../../results/denoising/low_noise_eval.csv): métricas de los AE de screening ante bajo ruido.
-- [`shortlist.csv`](../../results/denoising/shortlist.csv): ranking y corridas seleccionadas.
-- [`noise_eval.csv`](../../results/denoising/noise_eval.csv): métricas por modelo, configuración, semilla, ruido, nivel y prueba.
-- [`scripts/noise_eval.py`](../../scripts/noise_eval.py): selección, evaluación y generación de gráficos.
+- [`low_noise_eval.csv`](../../results/denoising/low_noise_eval.csv): métricas de todos los AE de referencia y DAEs de screening a bajo ruido.
+- [`shortlist.csv`](../../results/denoising/shortlist.csv): Top 10 clasificado por DAE.
+- [`model_pairs.csv`](../../results/denoising/model_pairs.csv): correspondencia AE–DAE por semilla.
+- [`noise_eval.csv`](../../results/denoising/noise_eval.csv): evaluación final del Top 10.
+- [`scripts/noise_eval.py`](../../scripts/noise_eval.py): entrenamiento del screening, selección, contraste y gráficos.
 
-Para recalcular las métricas y regenerar las figuras usando los pesos ya entrenados, sin volver a entrenar DAE/VAE:
+Desde la raíz del repositorio:
 
 ```bash
-python scripts/noise_eval.py \
-  --summary results/summary/runs.csv \
-  --runs-dir results/runs \
-  --output-dir results/denoising \
-  --figures-dir figures/b \
-  --top-n 10 \
-  --skip-training
+python scripts/preprocess_font.py
+python scripts/sweep.py --sweep configs/sweeps/a2_screening.yaml
+python scripts/noise_eval.py --summary results/summary/runs.csv \
+  --runs-dir results/runs --output-dir results/denoising \
+  --figures-dir figures/b --top-n 10
 ```
+
+Para regenerar las tablas y figuras sin reentrenar, agregar `--skip-training` cuando existan `model_pairs.csv` y los pesos de todos los DAEs evaluados.

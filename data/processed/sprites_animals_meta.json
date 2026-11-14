@@ -1,0 +1,36 @@
+{
+  "tsx": "/Users/juampi/SIA/TPV-SIA/data/raw/sprites/tileset_colored.tsx",
+  "png": "/Users/juampi/SIA/TPV-SIA/data/raw/sprites/tileset_legacy.png",
+  "channels": "rgb",
+  "regions": [
+    {
+      "name": "animales",
+      "rows": [
+        5,
+        8
+      ],
+      "cols": [
+        24,
+        31
+      ]
+    }
+  ],
+  "dedup": true,
+  "n_before_dedup": 32,
+  "n_after_dedup": 32,
+  "n_discarded_bg": 32,
+  "val_split": 0.2,
+  "seed": 42,
+  "n_train": 26,
+  "n_val": 6,
+  "tile_shape": [
+    16,
+    16,
+    3
+  ],
+  "bg_color": [
+    0.2800000011920929,
+    0.18000000715255737,
+    0.23999999463558197
+  ]
+}

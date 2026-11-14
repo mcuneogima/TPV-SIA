@@ -1,0 +1,9 @@
+# Fine beta sweep on the small animal-region subset of the processed sprite tileset.
+base: configs/vae_sprites_animals.yaml
+mode: ofat
+seeds: [42, 101, 202]
+
+grid:
+  loss.beta: [0.5, 0.65, 0.75, 0.85, 1.0]
+  model.latent_dim: [2, 8, 16]
+  loss.beta_warmup_epochs: [0, 50]

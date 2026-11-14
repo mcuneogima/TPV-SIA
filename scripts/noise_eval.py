@@ -85,7 +85,13 @@ def _evaluate_candidates(
 
 
 def _rank_candidates(low_results: pd.DataFrame, top_n: int) -> pd.DataFrame:
-    scores = low_results.groupby(["run_id"] + CONFIG_COLUMNS, dropna=False).agg(
+    if "model_type" in low_results:
+        low_results = low_results[low_results["model_type"] == "denoising"]
+    if low_results.empty:
+        raise ValueError("No hay resultados DAE para construir el ranking.")
+
+    run_id_column = "source_run_id" if "source_run_id" in low_results else "run_id"
+    scores = low_results.groupby([run_id_column] + CONFIG_COLUMNS, dropna=False).agg(
         low_noise_frac_ok=("frac_ok", "mean"),
         low_noise_mean_pixel_errors=("mean_pixel_errors", "mean"),
     ).reset_index()
@@ -93,8 +99,8 @@ def _rank_candidates(low_results: pd.DataFrame, top_n: int) -> pd.DataFrame:
         low_noise_frac_ok=("low_noise_frac_ok", "mean"),
         low_noise_std=("low_noise_frac_ok", "std"),
         low_noise_mean_pixel_errors=("low_noise_mean_pixel_errors", "mean"),
-        n_seeds=("run_id", "nunique"),
-        source_run_ids=("run_id", lambda values: json.dumps(sorted(set(values)))),
+        n_seeds=(run_id_column, "nunique"),
+        source_run_ids=(run_id_column, lambda values: json.dumps(sorted(set(values)))),
     ).reset_index()
     ranked["low_noise_std"] = ranked["low_noise_std"].fillna(0.0)
     ranked = ranked.sort_values(
@@ -110,28 +116,22 @@ def _candidate_key(row: pd.Series) -> Tuple[object, ...]:
 
 
 def _train_daes(
-    ranked: pd.DataFrame,
     source_rows: pd.DataFrame,
     source_runs_dir: pathlib.Path,
     output_dir: pathlib.Path,
     train_level: float,
     epochs: int | None,
-    include_vae: bool,
 ) -> List[Dict[str, str]]:
     run_dir = output_dir / "runs"
     summary_dir = output_dir / "summary"
-    ranked_by_key = {_candidate_key(row): int(row["rank"]) for _, row in ranked.iterrows()}
     pairs = []
 
     for _, row in source_rows.iterrows():
-        rank = ranked_by_key.get(_candidate_key(row))
-        if rank is None:
-            continue
         source_run_id = str(row["run_id"])
         source_path = _run_path(source_runs_dir, source_run_id)
         with (source_path / "config_resolved.yaml").open("r", encoding="utf-8") as file:
             cfg = yaml.safe_load(file)
-        cfg["run_name"] = f"dae_b1_top{rank:02d}_{cfg.get('run_name', 'run')}"
+        cfg["run_name"] = f"dae_screen_{source_run_id}"
         cfg["model"]["type"] = "denoising"
         cfg["noise"] = {
             **cfg.get("noise", {}),
@@ -151,54 +151,15 @@ def _train_daes(
         dae_run_id = generate_run_id(cfg)
         dae_path = run_dir / dae_run_id
         if not (dae_path / "weights.npz").exists():
-            print(f"[DAE] Entrenando top {rank:02d}, seed={cfg.get('seed')}")
+            print(f"[DAE] Screening {source_run_id}, seed={cfg.get('seed')}")
             Trainer(cfg).train()
         else:
             print(f"[DAE] Reutilizando corrida existente: {dae_run_id}")
-        pair = {
-            "rank": str(rank),
+        pairs.append({
             "source_run_id": source_run_id,
             "dae_run_id": dae_run_id,
             "seed": str(cfg.get("seed")),
-        }
-
-        if include_vae:
-            vae_cfg = yaml.safe_load((source_path / "config_resolved.yaml").read_text(encoding="utf-8"))
-            vae_cfg["run_name"] = f"vae_b1_top{rank:02d}_{vae_cfg.get('run_name', 'run')}"
-            vae_cfg["model"]["type"] = "vae"
-            encoder_layers = vae_cfg["model"]["encoder"]["layers"]
-            if (
-                encoder_layers
-                and int(encoder_layers[-1]["units"]) == int(vae_cfg["model"]["latent_dim"])
-                and encoder_layers[-1].get("activation") == "identity"
-            ):
-                vae_cfg["model"]["encoder"]["layers"] = encoder_layers[:-1]
-            vae_cfg["loss"]["beta_warmup_epochs"] = max(
-                int(vae_cfg["loss"].get("beta_warmup_epochs", 0)), 100
-            )
-            vae_cfg["noise"] = {
-                **vae_cfg.get("noise", {}),
-                "kind": "flip",
-                "level": train_level,
-                "regenerate_each_epoch": True,
-            }
-            vae_cfg["output"] = {
-                **vae_cfg.get("output", {}),
-                "dir": str(run_dir),
-                "summary_dir": str(summary_dir),
-                "save_weights": True,
-            }
-            if epochs is not None:
-                vae_cfg["train"]["epochs"] = epochs
-            vae_run_id = generate_run_id(vae_cfg)
-            vae_path = run_dir / vae_run_id
-            if not (vae_path / "weights.npz").exists():
-                print(f"[VAE] Entrenando referencia top {rank:02d}, seed={vae_cfg.get('seed')}")
-                Trainer(vae_cfg).train()
-            else:
-                print(f"[VAE] Reutilizando corrida existente: {vae_run_id}")
-            pair["vae_run_id"] = vae_run_id
-        pairs.append(pair)
+        })
     return pairs
 
 
@@ -224,7 +185,7 @@ def _save_ranking_plot(ranked: pd.DataFrame, path: pathlib.Path) -> None:
     ax.invert_yaxis()
     ax.set_xlim(0, 1.05)
     ax.set_xlabel("Proporción promedio de patrones OK (≤ 1 píxel), flip y mask de bajo nivel")
-    ax.set_title("Top configuraciones de 1.a.2 por robustez a bajo ruido")
+    ax.set_title("Top configuraciones DAE por robustez a bajo ruido")
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, bbox_inches="tight")
@@ -251,7 +212,6 @@ def _save_robustness_plots(results: pd.DataFrame, figures_dir: pathlib.Path) -> 
                 "noisy_input": "Entrada ruidosa",
                 "autoencoder": "AE",
                 "denoising": "DAE",
-                "vae": "VAE",
             }.get(model_type, model_type)
             for axis, mean_key, std_key, ylabel in (
                 (ax_ok, "ok_mean", "ok_std", "Patrones OK (fracción)"),
@@ -268,7 +228,7 @@ def _save_robustness_plots(results: pd.DataFrame, figures_dir: pathlib.Path) -> 
                 axis.legend()
                 if mean_key == "ok_mean":
                     axis.set_ylim(0, 1.05)
-        fig.suptitle(f"Referencia sin procesar y robustez de AE/DAE/VAE ante ruido {kind}")
+        fig.suptitle(f"Referencia sin procesar y robustez de AE/DAE ante ruido {kind}")
         fig.tight_layout()
         figures_dir.mkdir(parents=True, exist_ok=True)
         fig.savefig(figures_dir / f"robustness_{kind}.png", bbox_inches="tight")
@@ -277,8 +237,8 @@ def _save_robustness_plots(results: pd.DataFrame, figures_dir: pathlib.Path) -> 
         heat = subset.groupby(["model_type", "rank", "level"])["frac_ok"].mean().reset_index()
         ranks = sorted(heat["rank"].dropna().unique())
         levels = sorted(heat["level"].unique())
-        model_types = ("noisy_input", "autoencoder", "denoising", "vae")
-        fig, axes = plt.subplots(1, len(model_types), figsize=(22, max(4, len(ranks) * 0.45)), dpi=180)
+        model_types = ("noisy_input", "autoencoder", "denoising")
+        fig, axes = plt.subplots(1, len(model_types), figsize=(18, max(4, len(ranks) * 0.45)), dpi=180)
         for axis, model_type in zip(axes, model_types):
             matrix = (
                 heat[heat["model_type"] == model_type]
@@ -293,7 +253,6 @@ def _save_robustness_plots(results: pd.DataFrame, figures_dir: pathlib.Path) -> 
                 "noisy_input": "Entrada ruidosa",
                 "autoencoder": "AE",
                 "denoising": "DAE",
-                "vae": "VAE",
             }[model_type])
             axis.set_xlabel(f"Nivel {kind}")
             axis.set_xticks(np.arange(len(levels)), [f"{value:g}" for value in levels])
@@ -329,9 +288,6 @@ def _save_examples(
     sample = X_clean[indices]
     ae, _ = load_model_from_run(_run_path(source_runs_dir, best["source_run_id"]))
     dae, dae_cfg = load_model_from_run(_run_path(dae_runs_dir, best["dae_run_id"]))
-    vae = None
-    if "vae_run_id" in best:
-        vae, _ = load_model_from_run(_run_path(dae_runs_dir, best["vae_run_id"]))
 
     for kind in ("flip", "mask"):
         shown_levels = [level for level in (0.1, 0.3, 0.5) if level in levels]
@@ -339,8 +295,6 @@ def _save_examples(
             shown_levels = [levels[0], levels[-1]] if len(levels) > 1 else levels
         rng = np.random.default_rng(42)
         row_labels = ["Original limpio", "Entrada ruidosa", "Reconstrucción AE", "Reconstrucción DAE"]
-        if vae is not None:
-            row_labels.append("Reconstrucción VAE")
         n_rows = len(row_labels)
         fig, axes = plt.subplots(n_rows, len(shown_levels), figsize=(3.4 * len(shown_levels), 1.5 * n_rows), dpi=180)
         if len(shown_levels) == 1:
@@ -350,8 +304,6 @@ def _save_examples(
             ae_hat = reconstruct(ae, noisy)
             dae_hat = reconstruct(dae, noisy)
             blocks = [sample, noisy, ae_hat, dae_hat]
-            if vae is not None:
-                blocks.append(reconstruct(vae, noisy))
             for row, block in enumerate(blocks):
                 image = block.reshape(4, 7, 5)
                 montage = np.concatenate(list(image), axis=1)
@@ -375,7 +327,7 @@ def _save_examples(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Selecciona configuraciones de 1.a.2 y evalúa AE/DAE/VAE ante flip y mask."
+        description="Entrena DAEs de screening, selecciona el top y compara DAE con AE ante flip y mask."
     )
     parser.add_argument("--summary", default="results/summary/runs.csv")
     parser.add_argument("--runs-dir", default="results/runs")
@@ -387,8 +339,7 @@ def main() -> None:
     parser.add_argument("--train-noise-level", type=float, default=0.1)
     parser.add_argument("--trials", type=int, default=10)
     parser.add_argument("--epochs", type=int, default=None, help="Sobrescribe las épocas de entrenamiento de 1.a.2.")
-    parser.add_argument("--skip-training", action="store_true", help="Reutiliza pesos DAE/VAE existentes.")
-    parser.add_argument("--without-vae", action="store_true", help="Omite el VAE de referencia sobre font.h.")
+    parser.add_argument("--skip-training", action="store_true", help="Reutiliza los DAEs de screening existentes.")
     args = parser.parse_args()
 
     if args.top_n < 1 or args.trials < 1:
@@ -418,16 +369,62 @@ def main() -> None:
         parser.error(f"Faltan columnas de hiperparámetros en el resumen: {', '.join(missing_columns)}")
 
     X_clean = np.load("data/processed/font.npz")["X"].astype(np.float64)
-    print(f"[RANK] Midiendo {len(eligible)} corridas ante bajo ruido...")
-    low_results = _evaluate_candidates(
+    print(f"[SCREEN] Evaluando {len(eligible)} AE de referencia ante bajo ruido...")
+    ae_low_results = _evaluate_candidates(
         eligible, runs_dir, X_clean, low_levels, args.trials, ("flip", "mask"), seed_offset=2026
     )
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    pairs_path = output_dir / "model_pairs.csv"
+    if args.skip_training:
+        if not pairs_path.exists():
+            parser.error(f"No existe {pairs_path}; primero ejecutá el screening con entrenamiento.")
+        pairs = pd.read_csv(pairs_path).fillna("").to_dict("records")
+        missing = [
+            pair["dae_run_id"]
+            for pair in pairs
+            if not (output_dir / "runs" / pair["dae_run_id"] / "weights.npz").exists()
+        ]
+        if missing:
+            parser.error(f"Faltan pesos DAE de screening: {', '.join(missing[:3])}")
+    else:
+        pairs = _train_daes(
+            eligible,
+            runs_dir,
+            output_dir,
+            args.train_noise_level,
+            args.epochs,
+        )
+        pd.DataFrame(pairs).to_csv(pairs_path, index=False)
+
+    dae_summary_path = output_dir / "summary" / "runs.csv"
+    if not dae_summary_path.exists():
+        parser.error(f"No existe el resumen DAE: {dae_summary_path}")
+    dae_summary = pd.read_csv(dae_summary_path)
+    dae_by_id = {pair["dae_run_id"]: pair["source_run_id"] for pair in pairs}
+    dae_ids = set(dae_by_id)
+    dae_rows = dae_summary[dae_summary["run_id"].astype(str).isin(dae_ids)].copy()
+    if dae_rows.empty:
+        parser.error("No se encontraron corridas DAE de screening en el resumen.")
+    print(f"[SCREEN] Midiendo {len(dae_rows)} DAEs ante bajo ruido...")
+    dae_low_results = _evaluate_candidates(
+        dae_rows,
+        output_dir / "runs",
+        X_clean,
+        low_levels,
+        args.trials,
+        ("flip", "mask"),
+        seed_offset=12026,
+    )
+    dae_low_results["source_run_id"] = dae_low_results["run_id"].map(dae_by_id)
+    ae_low_results["source_run_id"] = ae_low_results["run_id"].astype(str)
+    low_results = pd.concat([ae_low_results, dae_low_results], ignore_index=True)
     low_results.to_csv(output_dir / "low_noise_eval.csv", index=False)
-    ranked = _rank_candidates(low_results, args.top_n)
+
+    ranked = _rank_candidates(dae_low_results, args.top_n)
     ranked.to_csv(output_dir / "shortlist.csv", index=False)
     _save_ranking_plot(ranked, figures_dir / "low_noise_ranking.png")
-    print(f"[RANK] Shortlist guardado en {output_dir / 'shortlist.csv'}")
+    print(f"[RANK] Top {len(ranked)} DAE guardado en {output_dir / 'shortlist.csv'}")
 
     selected_ids = {
         run_id
@@ -435,52 +432,20 @@ def main() -> None:
         for run_id in json.loads(value)
     }
     selected_sources = eligible[eligible["run_id"].astype(str).isin(selected_ids)].copy()
-    pairs: List[Dict[str, str]] = []
-    if not args.skip_training:
-        pairs = _train_daes(
-            ranked,
-            selected_sources,
-            runs_dir,
-            output_dir,
-            args.train_noise_level,
-            args.epochs,
-            include_vae=not args.without_vae,
-        )
-    else:
-        dae_summary = output_dir / "summary" / "runs.csv"
-        if dae_summary.exists():
-            dae_df = pd.read_csv(dae_summary)
-            rank_by_key = {
-                _candidate_key(row): int(row["rank"])
-                for _, row in ranked.iterrows()
-            }
-            for _, source in selected_sources.iterrows():
-                rank = rank_by_key.get(_candidate_key(source))
-                if rank is None:
-                    continue
-                dae_matches = dae_df[
-                    dae_df["run_name"].astype(str).str.startswith(f"dae_b1_top{rank:02d}_")
-                    & (dae_df["seed"].astype(int) == int(source["seed"]))
-                ]
-                vae_matches = (
-                    dae_df[
-                        dae_df["run_name"].astype(str).str.startswith(f"vae_b1_top{rank:02d}_")
-                        & (dae_df["seed"].astype(int) == int(source["seed"]))
-                    ]
-                    if not args.without_vae
-                    else dae_df.iloc[0:0]
-                )
-                for _, dae in dae_matches.iterrows():
-                    pairs.append({
-                        "rank": str(rank),
-                        "source_run_id": str(source["run_id"]),
-                        "dae_run_id": str(dae["run_id"]),
-                        "seed": str(source["seed"]),
-                    })
-                    if not vae_matches.empty:
-                        pairs[-1]["vae_run_id"] = str(vae_matches.iloc[0]["run_id"])
+    rank_by_key = {
+        _candidate_key(row): int(row["rank"])
+        for _, row in ranked.iterrows()
+    }
+    source_by_id = eligible.set_index(eligible["run_id"].astype(str))
+    selected_pairs = []
+    for pair in pairs:
+        source = source_by_id.loc[pair["source_run_id"]]
+        rank = rank_by_key.get(_candidate_key(source))
+        if rank is not None:
+            selected_pairs.append({**pair, "rank": str(rank)})
+    pairs = selected_pairs
     if not pairs:
-        parser.error("No hay corridas DAE compatibles; quitá --skip-training o entrená los modelos primero.")
+        parser.error("No hay DAEs de screening compatibles con el Top 10.")
 
     eval_records = []
     source_by_id = selected_sources.set_index(selected_sources["run_id"].astype(str))
@@ -488,8 +453,6 @@ def main() -> None:
         source_path = _run_path(runs_dir, pair["source_run_id"])
         dae_path = _run_path(output_dir / "runs", pair["dae_run_id"])
         runs_to_evaluate = [(source_path, "autoencoder"), (dae_path, "denoising")]
-        if "vae_run_id" in pair:
-            runs_to_evaluate.append((_run_path(output_dir / "runs", pair["vae_run_id"]), "vae"))
         source_row = source_by_id.loc[pair["source_run_id"]]
         metadata = {column: source_row.get(column) for column in CONFIG_COLUMNS}
         for run_path, model_type in runs_to_evaluate:

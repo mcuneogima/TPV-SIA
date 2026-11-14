@@ -321,14 +321,14 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
 
 **1.b.1 Arquitectura y justificación.**
 
-- Seleccionar hasta 10 configuraciones del screening OFAT de 1.a.2. El ranking mide reconstrucción de los AE ante flip y mask de bajo nivel (0.05 y 0.1), promediando corridas/semillas; así se conservan las variaciones de arquitectura, activación, pérdida, batch, inicialización, optimizador, tasa y schedule que ya se evaluaron.
-- Para cada configuración seleccionada, entrenar un DAE con los mismos hiperparámetros y semillas, usando flip 0.1 y reconstrucción contra el patrón limpio.
-- Incluir un VAE de referencia por configuración, con el mismo cuello latente y tronco encoder (se excluye del tronco la capa determinista que producía el código latente del AE). Se entrena con el mismo flip y conjunto `font.h`; esto permite comparar AE/DAE/VAE en el mismo dominio. No reemplaza la comparación VAE de la Parte 2, cuyo dataset son sprites.
+- Entrenar DAEs con los hiperparámetros de las configuraciones del screening OFAT de 1.a.2. El Top 10 se selecciona **por el desempeño de los DAEs**, no por el AE de origen: reconstrucción ante `flip` y `mask` de bajo nivel (0.05 y 0.1), promediando tres semillas.
+- Evaluar también los AE de origen como referencia pareada, para contrastar, no para construir el ranking. Las variaciones de arquitectura, activación, pérdida, batch, inicialización, optimizador, tasa y schedule provienen del mismo screening de 1.a.2.
+- El entrenamiento DAE usa `flip=0.1` y compara la reconstrucción con el patrón limpio. En este punto no se entrenan ni evalúan VAEs.
 
 **1.b.2 Estudio del efecto del ruido.**
 
-- Evaluar AE, DAE y VAE con flip y mask en test en niveles `0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5`, con 10 corrupciones reproducibles por nivel. El entrenamiento queda fijo en flip 0.1 para aislar la tolerancia ante ambos tipos de corrupción.
-- `scripts/noise_eval.py` calcula `low_noise_eval.csv`, `shortlist.csv` y `noise_eval.csv`, y genera el ranking de bajo ruido, curvas de fracción de patrones OK/error medio, mapas de calor por configuración/nivel y grillas de originales, entradas ruidosas y reconstrucciones AE/DAE/VAE. Las curvas incluyen la entrada ruidosa sin procesar como referencia.
+- Evaluar AE y DAE con `flip` y `mask` en niveles `0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5`, con 10 corrupciones reproducibles por nivel. El entrenamiento queda fijo en `flip=0.1` para aislar la tolerancia ante ambos tipos de corrupción.
+- `scripts/noise_eval.py` calcula `low_noise_eval.csv`, `shortlist.csv`, `model_pairs.csv` y `noise_eval.csv`. El ranking usa sólo métricas DAE; las salidas incluyen la comparación AE/DAE, curvas, mapas de calor por configuración/nivel y ejemplos junto con la referencia de entrada ruidosa.
 - Ejecución completa desde la raíz del repositorio:
 
   ```bash
@@ -338,7 +338,7 @@ Cada script lee de `results/` y escribe en `figures/<parte>/`. A continuación, 
     --output-dir results/denoising --figures-dir figures/b --top-n 10
   ```
 
-  El screening usa `mode: ofat` y tres semillas; cada eje se modifica por separado respecto de `ae_basic.yaml`, no se ejecuta el producto cartesiano. El último comando entrena los finalistas y deja las tablas en `results/denoising/` y las figuras en `figures/b/`. Para regenerar los análisis sin volver a entrenar, agregar `--skip-training` cuando ya existan los pesos DAE/VAE.
+  El screening usa `mode: ofat` y tres semillas; cada eje se modifica por separado respecto de `ae_basic.yaml`, no se ejecuta el producto cartesiano. El comando de evaluación entrena un DAE por cada corrida AE disponible, construye el Top 10 por las métricas de los DAEs y luego compara AE/DAE para esos finalistas. Deja las tablas en `results/denoising/` y las figuras en `figures/b/`. Para regenerar los análisis sin volver a entrenar, agregar `--skip-training` cuando existan los pesos de screening.
 
 ### Parte 2: VAE
 
@@ -359,6 +359,21 @@ Se usa el dataset ya procesado en `data/processed/sprites.npz`: 790 muestras de 
 - Guarda `prior_samples.png`, `prior_samples.npz` y `prior_samples_nearest.csv`; este último informa el MSE del vecino de entrenamiento más cercano para ayudar a juzgar si una muestra es novedosa o una copia aproximada. La selección final de una muestra válida sigue siendo cualitativa y debe explicitarse en el informe.
 - `figures/vae/Explicación.md` describe las figuras, metodología, resultados cuantitativos, límites y el criterio de inspección cualitativa de la muestra #23.
 - La interpolación AE/VAE con el mismo par de sprites se genera en `ae_vae_interpolation.png`.
+
+**Experimento adicional: subset regional y β refinado.**
+
+- `configs/dataset_sprites.yaml` define la región `animales` (filas 5–8, columnas 24–31). `scripts/preprocess_sprites.py --config ...` lee ahora las regiones del YAML y guarda en `data/processed/sprites_animals.npz`, sin sobrescribir el dataset completo.
+- El subset contiene 32 sprites únicos: 26 para entrenamiento y 6 para validación. Se comparan β = 0.5, 0.65, 0.75, 0.85 y 1.0; también se repiten los controles OFAT de dimensión latente 2/8/16 y warmup 0/50 a β=1. Se usan tres semillas y 500 épocas por corrida, más un AE 2D de control.
+- Las configuraciones `configs/vae_sprites_animals.yaml`, `configs/sweeps/vae_sprites_animals.yaml`, `configs/ae_sprites_animals.yaml` y `configs/sweeps/ae_sprites_animals.yaml` guardan este experimento en `results/sprites_animals/`. El informe y las figuras están en `figures/vae_animals/`.
+
+```bash
+python scripts/preprocess_sprites.py --config configs/dataset_sprites.yaml
+python scripts/sweep.py --sweep configs/sweeps/ae_sprites_animals.yaml
+python scripts/sweep.py --sweep configs/sweeps/vae_sprites_animals.yaml
+python scripts/plot_vae.py --summary results/sprites_animals/summary/runs.csv \
+  --runs-dir results/sprites_animals/runs --data data/processed/sprites_animals.npz \
+  --output-dir figures/vae_animals
+```
 
 **Ejecución completa desde la raíz del repositorio** (el `.npz` existente no requiere regeneración):
 
@@ -381,8 +396,8 @@ python scripts/generate.py --mode sample --summary results/summary/runs.csv \
 | 1.a.2 | `sweeps/a2_arquitecturas.yaml`, `plot_a2.py`, `plot_failure.py` | `runs.csv`, `epochs.csv`, curvas | Tabla comparativa, análisis de qué funcionó, si fue subconjunto el porqué |
 | 1.a.3 | `plot_latent.py` | scatter etiquetado | Estructura del espacio latente |
 | 1.a.4 | `generate.py` | letras nuevas e interpolación | Evaluación crítica |
-| 1.b.1 | `noise_eval.py`, resultados de 1.a.2 | `shortlist.csv` | Selección de configuraciones AE/DAE/VAE |
-| 1.b.2 | `noise_eval.py` | `low_noise_eval.csv`, `shortlist.csv`, `noise_eval.csv`, curvas, heatmaps y grillas | Capacidad de eliminar ruido y comparación AE/DAE/VAE |
+| 1.b.1 | `noise_eval.py`, resultados de 1.a.2 | `shortlist.csv` con ranking DAE | Selección directa de configuraciones DAE y contraste con AE |
+| 1.b.2 | `noise_eval.py` | `low_noise_eval.csv`, `model_pairs.csv`, `noise_eval.csv`, curvas, heatmaps y grillas | Capacidad de eliminar ruido y comparación AE/DAE |
 | 2.a | `data/processed/sprites.npz` | 790 train, 197 val, RGB 16×16 | Descripción del dataset |
 | 2.b | `sweeps/{ae,vae}_sprites.yaml`, `plot_vae.py` | curvas, trade-off β, dimensión, posterior, manifold, reconstrucción e interpolación | Efectos de β/dimensión/warmup y diferencia AE/VAE |
 | 2.c | `generate.py --mode sample` | grilla 8×8, NPZ y distancias a vecino más cercano | Muestra elegida, realismo y novedad |
@@ -397,5 +412,5 @@ python scripts/generate.py --mode sample --summary results/summary/runs.csv \
 
 ### Solicitudes completadas
 
-- **DAE (1.b):** se implementó la evaluación de robustez ante `flip` y `mask`, con selección de configuraciones, comparaciones AE/DAE/VAE y gráficos documentados en `figures/b/`.
-- **VAE (2):** se completaron los sweeps, análisis visual, muestreo del prior e informe de resultados en `figures/vae/Explicación.md`.
+- **DAE (1.b):** el ranking se basa ahora en DAEs entrenados con `flip=0.1`; los AEs se conservan sólo como referencia pareada. Se excluyeron los VAEs de este punto y se actualizaron las métricas y el informe en `figures/b/Explicación.md`.
+- **VAE (2):** se completaron los sweeps, análisis visual, muestreo del prior e informe de resultados en `figures/vae/Explicación.md`. También se probó el subset regional con un barrido refinado de β y su informe en `figures/vae_animals/Explicación.md`.
