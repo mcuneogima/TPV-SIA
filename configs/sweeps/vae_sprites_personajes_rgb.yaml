@@ -1,0 +1,5 @@
+base: configs/vae_sprites_personajes_rgb.yaml
+mode: ofat
+seeds: [42, 101, 202]
+grid:
+  loss.beta: [0.5]

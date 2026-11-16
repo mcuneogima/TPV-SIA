@@ -133,6 +133,17 @@ def test_sprites():
             _fail(f"No se encontró: {p}")
     # se puede cambiar la region a gusto
     data = load_sprites(str(tsx), str(png), channels="rgb", val_split=0.2, seed=412, dedup=True, regions=[{"name": "animales", "rows": [5, 8], "cols": [24, 31]}])
+    object_data = load_sprites(
+        str(tsx),
+        str(png),
+        channels="rgb",
+        val_split=0.2,
+        seed=42,
+        dedup=True,
+        regions=[{"name": "objetos", "rows": [0, 5], "cols": [0, 10]}],
+    )
+    assert object_data["meta"]["n_discarded_bg"] == 2
+    assert object_data["meta"]["n_after_dedup"] == 64
 
     X_train = data["X_train"]
     X_val   = data["X_val"]

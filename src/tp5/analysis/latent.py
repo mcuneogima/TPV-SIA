@@ -35,8 +35,12 @@ def load_model_from_run(run_dir: str | pathlib.Path) -> Tuple[Any, Dict[str, Any
     # font dataset tiene entrada 35
     input_dim = 35
     if cfg.get("data", {}).get("dataset") == "sprites":
-        channels = cfg.get("data", {}).get("channels", "rgb")
-        input_dim = 768 if channels == "rgb" else 256
+        decoder_layers = cfg.get("model", {}).get("decoder", {}).get("layers", [])
+        if decoder_layers:
+            input_dim = int(decoder_layers[-1]["units"])
+        else:
+            channels = cfg.get("data", {}).get("channels", "rgb")
+            input_dim = 768 if channels == "rgb" else 256
 
     model = build_model(cfg, input_dim=input_dim)
     weights = load_weights_npz(str(weights_path))

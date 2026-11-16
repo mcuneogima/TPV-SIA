@@ -1,0 +1,7 @@
+base: configs/vae_sprites_objetos_rgb.yaml
+mode: ofat
+seeds: [42, 101, 202]
+
+grid:
+  loss.beta: [0.1, 1.0]
+  model.latent_dim: [8]

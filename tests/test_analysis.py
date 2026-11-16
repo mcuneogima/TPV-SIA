@@ -8,9 +8,11 @@ import pathlib
 import pytest
 import numpy as np
 import pandas as pd
+import yaml
 
 from tp5.analysis.latent import load_model_from_run, load_latent_data, evaluate_decoder_grid, find_nearest_character
 from tp5.analysis.generate import generate_from_point, generate_midpoint, interpolate_linear
+from tp5.models.registry import build_model
 
 
 @pytest.fixture
@@ -73,3 +75,28 @@ def test_generation_midpoint_and_interpolate(sample_run_dir):
     lbl, dist, idx = find_nearest_character(df_latent, z_a)
     assert lbl == "a"
     assert np.isclose(dist, 0.0)
+
+
+def test_load_grayscale_sprite_model_without_channels_config(tmp_path):
+    cfg = {
+        "run_name": "gray_sprite_vae",
+        "data": {"dataset": "sprites"},
+        "model": {
+            "type": "vae",
+            "latent_dim": 2,
+            "encoder": {"layers": [{"units": 8, "activation": "relu"}]},
+            "decoder": {"layers": [{"units": 8, "activation": "relu"}, {"units": 256, "activation": "sigmoid"}]},
+            "init": "he",
+        },
+        "loss": {"recon": "mse", "beta": 1.0},
+    }
+    model = build_model(cfg, input_dim=256, rng=np.random.default_rng(42))
+    run_dir = tmp_path / "gray_sprite_vae"
+    run_dir.mkdir()
+    (run_dir / "config_resolved.yaml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    np.savez_compressed(run_dir / "weights.npz", **model.get_weights())
+
+    loaded, _ = load_model_from_run(run_dir)
+
+    assert loaded.input_dim == 256
+    assert loaded.decode(np.zeros((1, 2))).shape == (1, 256)

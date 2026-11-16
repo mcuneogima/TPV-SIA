@@ -1,0 +1,33 @@
+{
+  "tsx": "/Users/juampi/SIA/TPV-SIA/data/raw/sprites/tileset_colored.tsx",
+  "png": "/Users/juampi/SIA/TPV-SIA/data/raw/sprites/tileset_legacy.png",
+  "channels": "gray",
+  "regions": [
+    {
+      "name": "objetos",
+      "rows": [
+        0,
+        5
+      ],
+      "cols": [
+        0,
+        10
+      ]
+    }
+  ],
+  "dedup": true,
+  "n_before_dedup": 64,
+  "n_after_dedup": 64,
+  "n_discarded_bg": 2,
+  "val_split": 0.2,
+  "seed": 42,
+  "n_train": 52,
+  "n_val": 12,
+  "tile_shape": [
+    16,
+    16
+  ],
+  "bg_color": [
+    0.23000000417232513
+  ]
+}

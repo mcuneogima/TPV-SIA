@@ -171,11 +171,13 @@ def load_sprites(
                     break
         tiles = [t for t, _ in selected]
         coords = [rc for _, rc in selected]
-    else:
-        # filtrar tiles vacíos (solo fondo)
-        kept = [(t, rc) for t, rc in zip(tiles, coords) if not _is_background(t, bg_color)]
-        tiles = [t for t, _ in kept]
-        coords = [rc for _, rc in kept]
+
+    # filtrar tiles vacíos (solo fondo), también dentro de regiones seleccionadas
+    n_before_bg_filter = len(tiles)
+    kept = [(t, rc) for t, rc in zip(tiles, coords) if not _is_background(t, bg_color)]
+    tiles = [t for t, _ in kept]
+    coords = [rc for _, rc in kept]
+    n_discarded_bg = n_before_bg_filter - len(tiles)
 
     if not tiles:
         raise ValueError("No se encontraron tiles tras el filtrado. Revisá las regiones o el PNG.")
@@ -232,7 +234,7 @@ def load_sprites(
         "dedup": dedup,
         "n_before_dedup": n_before_dedup,
         "n_after_dedup": n_after_dedup,
-        "n_discarded_bg": len(tiles),
+        "n_discarded_bg": n_discarded_bg,
         "val_split": val_split,
         "seed": seed,
         "n_train": len(X_train),

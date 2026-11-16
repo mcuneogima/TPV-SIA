@@ -1,0 +1,12 @@
+data:
+  dataset: sprites
+  tsx: data/raw/sprites/tileset_colored.tsx
+  png: data/raw/sprites/tileset_legacy.png
+  channels: gray
+  regions:
+    - {name: personajes, rows: [0, 10], cols: [24, 31]}
+  dedup: true
+  val_split: 0.2
+  seed: 42
+  path: data/processed/sprites_personajes_gray.npz
+  meta_path: data/processed/sprites_personajes_gray_meta.json

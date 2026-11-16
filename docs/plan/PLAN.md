@@ -375,6 +375,13 @@ python scripts/plot_vae.py --summary results/sprites_animals/summary/runs.csv \
   --output-dir figures/vae_animals
 ```
 
+**Experimento adicional: generación por región y escala de grises.**
+
+- Se comparan las regiones `personajes` (filas 0–10, columnas 24–31) y `objetos` (filas 0–5, columnas 0–10), en RGB y gris. Los datasets y configuraciones de VAE están en `configs/dataset_sprites_{personajes,objetos}_{rgb,gray}.yaml` y `configs/vae_sprites_{personajes,objetos}_{rgb,gray}.yaml`.
+- Se entrenaron 3 semillas por condición con β=0.5, warmup=50 y z=16. En objetos se agregó un sweep exploratorio OFAT para β={0.1,1.0} y z=8, manteniendo fijas las demás variables y reutilizando la condición base z=16. Se seleccionaron modelos por MSE de validación y se muestrearon 64 puntos del prior para revisar la capacidad generativa.
+- El análisis y las figuras comparativas están en `figures/vae_regions/Explicación.md`. Las muestras de personajes incluyen algunas formas reconocibles; las de objetos siguen siendo difusas y no justifican afirmar generación convincente de objetos nuevos.
+- El filtro de tiles vacíos se aplica ahora también cuando se selecciona una región. Se corrigió asimismo `n_discarded_bg` para reportar los tiles de fondo efectivamente eliminados.
+
 **Ejecución completa desde la raíz del repositorio** (el `.npz` existente no requiere regeneración):
 
 ```bash

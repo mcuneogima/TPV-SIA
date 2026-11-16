@@ -1,0 +1,45 @@
+run_name: vae_sprites_objetos_gray_filtered
+seed: 42
+
+data:
+  dataset: sprites
+  path: data/processed/sprites_objetos_gray.npz
+  val_split: 0.2
+
+model:
+  type: vae
+  latent_dim: 16
+  encoder:
+    layers:
+      - {units: 256, activation: relu}
+      - {units: 128, activation: relu}
+  decoder:
+    layers:
+      - {units: 128, activation: relu}
+      - {units: 256, activation: relu}
+      - {units: 256, activation: sigmoid}
+  init: he
+
+loss:
+  recon: mse
+  beta: 0.5
+  beta_warmup_epochs: 50
+
+optimizer:
+  name: adam
+  lr: 0.0005
+  beta1: 0.9
+  beta2: 0.999
+  schedule: {name: exp_decay, gamma: 0.999}
+  grad_clip: 5.0
+
+train:
+  epochs: 500
+  batch_size: 32
+  eval_every: 10
+  early_stop: null
+
+output:
+  dir: results/sprites_generation/objetos_gray_filtered/runs
+  summary_dir: results/sprites_generation/objetos_gray_filtered/summary
+  save_weights: true

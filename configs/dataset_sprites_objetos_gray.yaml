@@ -1,0 +1,12 @@
+data:
+  dataset: sprites
+  tsx: data/raw/sprites/tileset_colored.tsx
+  png: data/raw/sprites/tileset_legacy.png
+  channels: gray
+  regions:
+    - {name: objetos, rows: [0, 5], cols: [0, 10]}
+  dedup: true
+  val_split: 0.2
+  seed: 42
+  path: data/processed/sprites_objetos_gray.npz
+  meta_path: data/processed/sprites_objetos_gray_meta.json
