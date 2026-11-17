@@ -4,9 +4,11 @@
 
 Se probó si un subset espacial más pequeño del tileset y valores de β entre 0.5 y 1 mejoraban el ajuste observado en el experimento completo. Se tomó la región `animales` de [`configs/dataset_sprites.yaml`](../../configs/dataset_sprites.yaml): filas 5–8 y columnas 24–31. Tras deduplicar quedan **32 imágenes RGB 16×16**, divididas en **26 de entrenamiento y 6 de validación**. El dataset completo `data/processed/sprites.npz` no se modificó.
 
+La [grilla latente en gris de personajes](../vae_regions/Explicación.md#personajes-grises-espacio-latente-2d-y-muestra-candidata) pertenece a un experimento separado, con una región más amplia y un VAE 2D distinto del modelo de este informe.
+
 Se entrenaron **24 VAE y 3 AE de control**, durante 500 épocas y con semillas 42, 101 y 202. Los barridos comparan β ∈ {0.5, 0.65, 0.75, 0.85, 1.0}, dimensión latente 2/8/16 y warmup 0/50. β, dimensión y warmup se varían por separado; las condiciones repetidas se comparten. Las tablas reportan media ± desvío estándar muestral entre semillas.
 
-El MSE suma los errores de los 768 canales por sprite y promedia sobre las muestras. No está dividido por 768. Como el conjunto de validación sólo tiene seis imágenes, sus medias son sensibles a qué ejemplos cayeron en ese split; se interpretan como evidencia exploratoria, no como una estimación estable de generalización.
+El MSE suma los errores de los 768 canales por sprite y promedia sobre las muestras. No está dividido por 768. El campo `loss` registrado suma reconstrucción determinista y KL sin ponderar esta última por β, por lo que no representa el objetivo de entrenamiento cuando β ≠ 1. Como el conjunto de validación sólo tiene seis imágenes, sus medias son sensibles a qué ejemplos cayeron en ese split; se interpretan como evidencia exploratoria, no como una estimación estable de generalización.
 
 ## Dataset y reconstrucciones
 
@@ -22,7 +24,7 @@ El entrenamiento logra errores bajos en algunas configuraciones, pero las recons
 
 Comparación para dimensión 16 y warmup=50:
 
-| β | MSE validación | MSE train | KL train | Pérdida total train |
+| β | MSE validación | MSE train | KL train | Reconstrucción + KL registrada |
 |---:|---:|---:|---:|---:|
 | 0.50 | 30.757 ± 1.235 | 1.574 ± 0.029 | 12.388 ± 0.210 | 13.962 |
 | **0.65** | **30.690 ± 0.569** | 2.114 ± 0.064 | 10.945 ± 0.248 | 13.060 |

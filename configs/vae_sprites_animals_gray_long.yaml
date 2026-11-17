@@ -1,0 +1,46 @@
+run_name: vae_sprites_animals_gray_long_matched
+seed: 42
+
+data:
+  dataset: sprites
+  path: data/processed/sprites_animals_gray.npz
+  val_split: 0.2
+
+model:
+  type: vae
+  latent_dim: 16
+  encoder:
+    layers:
+      - {units: 256, activation: relu}
+      - {units: 128, activation: relu}
+  decoder:
+    layers:
+      - {units: 128, activation: relu}
+      - {units: 256, activation: relu}
+      - {units: 256, activation: sigmoid}
+  init: he
+
+loss:
+  recon: mse
+  beta: 0.5
+  beta_warmup_epochs: 50
+
+optimizer:
+  name: adam
+  lr: 0.0005
+  momentum: 0.9
+  beta1: 0.9
+  beta2: 0.999
+  schedule: {name: exp_decay, gamma: 0.999}
+  grad_clip: 5.0
+
+train:
+  epochs: 2000
+  batch_size: 64
+  eval_every: 10
+  early_stop: null
+
+output:
+  dir: results/sprites_long/animals_gray/runs
+  summary_dir: results/sprites_long/animals_gray/summary
+  save_weights: true

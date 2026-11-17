@@ -7,6 +7,7 @@ Soporta los modos:
   (b) Punto medio entre dos caracteres conocidos: z_mid = (zA + zB) / 2.
   (c) Interpolación lineal en N pasos entre dos caracteres: z(t) = (1-t)*zA + t*zB.
   (d) Muestreo de sprites desde el prior normal estándar del VAE.
+  (e) Letra candidata comparada con todos los patrones de entrenamiento.
 
 Uso:
   python scripts/generate.py --mode all
@@ -14,6 +15,7 @@ Uso:
   python scripts/generate.py --mode interpolate --char1 a --char2 z --steps 9
   python scripts/generate.py --mode point --z 0.0 0.0
   python scripts/generate.py --mode sample --n-samples 64 --seed 42
+  python scripts/generate.py --mode new-letter --z 7.3 1.5 --letter-name "H mayúscula"
 """
 
 import argparse
@@ -194,6 +196,46 @@ def plot_point_generation(model, df_latent: pd.DataFrame, z_pt: np.ndarray, out_
     print(f"Generación manual guardada en: {out_path}")
 
 
+def plot_new_letter(model, cfg: dict, df_latent: pd.DataFrame, z_pt: np.ndarray, out_path: pathlib.Path, name: str):
+    """Compare a candidate letter with every training bitmap."""
+    data = load_dataset(cfg)
+    if data["image_shape"] != (7, 5) or data["labels"] is None:
+        raise ValueError("La generación de letras requiere el dataset font de 7x5.")
+    if len(data["labels"]) != len(data["X_train"]):
+        raise ValueError("Las etiquetas deben corresponder al conjunto de entrenamiento.")
+    continuous = generate_from_point(model, z_pt, binarize=False)
+    if not np.isfinite(continuous).all():
+        raise ValueError("El decoder produjo valores no finitos.")
+    binary = continuous >= 0.5
+    distances = np.count_nonzero(data["X_train"] != binary.ravel(), axis=1)
+    nearest = int(np.argmin(distances))
+    if distances[nearest] == 0:
+        raise ValueError("La salida binarizada coincide con un patrón de entrenamiento.")
+
+    fig, axes = plt.subplots(1, 4, figsize=(15, 4.5), dpi=180, gridspec_kw={"width_ratios": [1, 1, 1, 1.8]})
+    for axis, image, title in (
+        (axes[0], continuous, "Salida continua"),
+        (axes[1], binary, f"Candidata: {name}\nUmbral 0.5"),
+        (axes[2], data["X_train"][nearest].reshape(7, 5), f"Train más cercano: {data['labels'][nearest]}\n{distances[nearest]} píxeles distintos"),
+    ):
+        axis.imshow(image, cmap="binary", vmin=0, vmax=1, interpolation="nearest")
+        axis.set_title(title)
+        axis.set_xticks([])
+        axis.set_yticks([])
+    axes[3].scatter(df_latent["z1"], df_latent["z2"], s=35, alpha=0.6, label="Train")
+    axes[3].scatter([z_pt[0]], [z_pt[1]], marker="*", s=180, color="red", label="Punto elegido")
+    axes[3].set_xlabel("$z_1$")
+    axes[3].set_ylabel("$z_2$")
+    axes[3].legend()
+    axes[3].grid(alpha=0.25)
+    fig.suptitle(f"Decodificación desde z = ({z_pt[0]:.4f}, {z_pt[1]:.4f})")
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Candidata guardada en {out_path}; vecino '{data['labels'][nearest]}', distancia {distances[nearest]} píxeles.")
+
+
 def plot_midpoint_generation(model, df_latent: pd.DataFrame, c1: str, c2: str, out_path: pathlib.Path, run_title: str):
     """Grafica el punto medio entre dos caracteres conocidos junto a sus originales y trayectoria latente."""
     z_mid, img_mid_cont, z_a, z_b = generate_midpoint(model, df_latent, c1, c2, binarize=False)
@@ -299,10 +341,11 @@ def main():
     parser = argparse.ArgumentParser(description="Generar e interpolar muestras desde el espacio latente.")
     parser.add_argument("--run", type=str, default=None, help="Directorio o ID de corrida. Usa la mejor por defecto.")
     parser.add_argument("--summary", type=str, default="results/summary/runs.csv", help="Ruta a runs.csv.")
-    parser.add_argument("--mode", type=str, default="all", choices=["point", "midpoint", "interpolate", "all", "sample"], help="Modo de generación.")
+    parser.add_argument("--mode", type=str, default="all", choices=["point", "midpoint", "interpolate", "all", "sample", "new-letter"], help="Modo de generación.")
     parser.add_argument("--z", nargs=2, type=float, default=[0.0, 0.0], help="Coordenadas z1 z2 para modo point.")
     parser.add_argument("--char1", type=str, default="c", help="Primer caracter para punto medio / interpolación.")
     parser.add_argument("--char2", type=str, default="o", help="Segundo caracter para punto medio / interpolación.")
+    parser.add_argument("--letter-name", default="letra candidata", help="Interpretación visual de la letra generada.")
     parser.add_argument("--steps", type=int, default=7, help="Cantidad de pasos para interpolación.")
     parser.add_argument("--output-dir", type=str, default="figures/a4", help="Directorio de figuras de salida.")
     parser.add_argument("--n-samples", type=int, default=64, help="Cantidad de muestras en modo sample (default: 64).")
@@ -344,6 +387,12 @@ def main():
 
     df_latent = load_latent_data(run_dir)
     run_title = f"Run: {run_id} | Arch: {model.arch_str()} | Pérdida: {cfg['loss']['recon'].upper()}"
+
+    if args.mode == "new-letter":
+        if cfg.get("data", {}).get("dataset") != "font":
+            parser.error("El modo new-letter requiere una corrida entrenada con font.")
+        plot_new_letter(model, cfg, df_latent, np.array(args.z), out_dir / "new_letter.png", args.letter_name)
+        return
 
     if args.mode in ["point", "all"]:
         plot_point_generation(model, df_latent, np.array(args.z), out_dir / "generate_point.png", run_title)

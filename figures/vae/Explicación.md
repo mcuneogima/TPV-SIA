@@ -9,7 +9,7 @@ Se entrenaron **24 modelos durante 500 épocas**, todos con estado `ok`:
 - **3 AE deterministas** de control, dimensión latente 2, con las mismas semillas que los VAE.
 - **21 VAE** con semillas 42, 101 y 202. El diseño OFAT compara β=0.1/0.5/1/2 con dimensión 16; dimensiones 2/8/16 con β=1; y warmup de β de 0 frente a 50 épocas con dimensión 16 y β=1. Las condiciones compartidas se reutilizaron, no se repitieron.
 
-La pérdida MSE del proyecto suma los errores cuadrados de los 768 canales/píxeles por imagen y promedia sobre las muestras. Por eso las cifras no están normalizadas por 768. En las tablas se informa la media ± desvío estándar entre tres semillas. La pérdida total de VAE es `recon_loss + beta * kl_loss`.
+La pérdida MSE del proyecto suma los errores cuadrados de los 768 canales/píxeles por imagen y promedia sobre las muestras. Por eso las cifras no están normalizadas por 768. En las tablas se informa la media ± desvío estándar entre tres semillas. El objetivo de entrenamiento del VAE pondera la KL por β. **Aclaración:** el campo `loss` registrado y mostrado como pérdida total en las figuras suma la reconstrucción determinista y la KL sin ponderarla por β; no es el objetivo de entrenamiento cuando β ≠ 1.
 
 El VAE de mejor MSE de validación fue el de **β=0.5, dimensión 16 y warmup de 50 épocas** (semilla 42): MSE de validación 17.439. Se usa para la figura de reconstrucciones y para generar desde el prior. Para visualizar el plano latente y comparar interpolaciones en dos dimensiones se usa el modelo β=1, `z=2`, warmup=50.
 
@@ -25,7 +25,7 @@ La figura presenta 64 sprites de entrenamiento seleccionados de forma reproducib
 
 La figura muestra la media y ±1 desvío estándar entre semillas para `z=16` y warmup=50. Al aumentar β, la KL cae y se impone mayor regularidad, pero la reconstrucción pierde precisión.
 
-| β | MSE validación | Reconstrucción train | KL | Pérdida total |
+| β | MSE validación | Reconstrucción train | KL | Reconstrucción + KL registrada |
 |---:|---:|---:|---:|---:|
 | 0.1 | 18.394 ± 0.036 | 5.441 ± 0.024 | 32.245 ± 0.296 | 37.686 ± 0.297 |
 | 0.5 | **17.777 ± 0.293** | 7.835 ± 0.070 | 13.096 ± 0.296 | 20.930 ± 0.254 |

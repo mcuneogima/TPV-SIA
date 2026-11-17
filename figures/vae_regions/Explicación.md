@@ -36,6 +36,20 @@ Las imágenes de entrada permiten ver la variedad y la complejidad de cada regi�
 
 En ambas representaciones aparecen algunas siluetas de personajes reconocibles, pero muchas muestras son borrosas o mezclan partes. RGB preserva los colores; gris elimina esa información y algunas siluetas se ven más fáciles de distinguir, aunque eso no implica mayor fidelidad en todos los ejemplos.
 
+### Personajes grises: espacio latente 2D y muestra candidata
+
+Para obtener una grilla realmente bidimensional, se entrenó **otro VAE con z=2**, no una proyección ni un corte arbitrario del modelo de 16 dimensiones anterior. Se usaron los mismos 71 sprites de train y 17 de validación, β=0.5, warmup=50, semilla 42 y 2000 épocas; la configuración es [`vae_sprites_personajes_gray_2d.yaml`](../../configs/vae_sprites_personajes_gray_2d.yaml). Los datos grises de esta región tienen dos intensidades, aproximadamente 0.230 y 0.770.
+
+![Grilla de decodificación 2D para personajes en gris](./personajes_gray_2d/latent_manifold_2d.png)
+
+La grilla contiene 13×13 decodificaciones: `z1` crece de izquierda a derecha y `z2` de arriba abajo, ambos entre −2.5 y 2.5. Es una grilla uniforme, no una colección de muestras aleatorias del prior: los extremos tienen menor probabilidad bajo `N(0,I)`. Se observan transiciones entre siluetas y también zonas borrosas; la continuidad visual no garantiza que todas las imágenes sean sprites válidos. Como la región seleccionada incluye filas 5–8, también aparecen figuras de animales.
+
+![Muestra 54 del prior y su vecino train](./personajes_gray_2d/prior_sample_selected.png)
+
+Entre [64 muestras del prior](./personajes_gray_2d/prior_samples.png) (`z ~ N(0,I)`, semilla 42), se eligió **visualmente** la #54, `z ≈ (0.8403, −1.7273)`, como candidata para la consigna 2.c: se distingue una figura con casco y cuerpo que tiene la estética de un sprite del dataset. Está suavizada y se parece mucho al vecino train #10 (fila 9, columna 31): su MSE al vecino es **0.01167 por píxel**. Al umbralizar ambos a 0.5 difieren en 14 de 256 píxeles; la salida continua no coincide exactamente con ningún sprite de train ni validación. Estas distancias demuestran diferencia pixel a pixel, **no** novedad semántica ni ausencia de memorización. La elección favorable entre 64 muestras tampoco mide la calidad promedio de generación: muchas otras son mezclas borrosas.
+
+Para esta única corrida, el MSE por píxel de la reconstrucción determinista final fue 0.01702 en train y 0.03518 en validación. Es una ilustración, no una comparación controlada con los modelos z=16 de 500 épocas.
+
 ### Objetos
 
 ![Sprites de entrenamiento de objetos RGB](./objetos_rgb/dataset_samples.png)
@@ -120,4 +134,17 @@ python scripts/generate.py --mode sample \
 python scripts/generate.py --mode sample \
   --run results/sprites_generation/objetos_gray_filtered/runs/vae_sprites_objetos_gray_filtered_7f5e5906_s42 \
   --output-dir figures/vae_regions/objetos_gray --n-samples 64 --seed 42
+```
+
+Para reproducir la grilla de personajes grises y la muestra #54:
+
+```bash
+python -m scripts.preprocess_sprites --config configs/dataset_sprites_personajes_gray.yaml
+python -m scripts.run --config configs/vae_sprites_personajes_gray_2d.yaml
+python -m scripts.plot_vae \
+  --manifold-run results/sprites_generation/personajes_gray_2d/runs/vae_sprites_personajes_gray_2d_adad490e_s42 \
+  --output-dir figures/vae_regions/personajes_gray_2d
+python -m scripts.generate --mode sample \
+  --run results/sprites_generation/personajes_gray_2d/runs/vae_sprites_personajes_gray_2d_adad490e_s42 \
+  --output-dir figures/vae_regions/personajes_gray_2d --n-samples 64 --seed 42 --selected-sample 54
 ```

@@ -13,6 +13,8 @@ import yaml
 from tp5.analysis.latent import load_model_from_run, load_latent_data, evaluate_decoder_grid, find_nearest_character
 from tp5.analysis.generate import generate_from_point, generate_midpoint, interpolate_linear
 from tp5.models.registry import build_model
+from scripts.plot_vae import _plot_latent_manifold
+from scripts.generate import plot_new_letter
 
 
 @pytest.fixture
@@ -100,3 +102,67 @@ def test_load_grayscale_sprite_model_without_channels_config(tmp_path):
 
     assert loaded.input_dim == 256
     assert loaded.decode(np.zeros((1, 2))).shape == (1, 256)
+
+
+def test_grayscale_sprite_manifold(tmp_path):
+    class GrayDecoder:
+        def decode(self, z):
+            self.points = z
+            return np.tile(np.linspace(0, 1, 256), (len(z), 1))
+
+    model = GrayDecoder()
+    path = tmp_path / "gray_manifold.png"
+    _plot_latent_manifold(model, path, steps=3, shape=(16, 16))
+
+    from PIL import Image
+
+    image = np.asarray(Image.open(path).convert("RGB"))
+    assert path.is_file()
+    assert np.array_equal(image[:, :, 0], image[:, :, 1])
+    assert np.array_equal(image[:, :, 1], image[:, :, 2])
+    np.testing.assert_array_equal(model.points[[0, -1]], [[-2.5, -2.5], [2.5, 2.5]])
+
+
+def test_rgb_sprite_manifold(tmp_path):
+    class RGBDecoder:
+        def decode(self, z):
+            image = np.zeros((16, 16, 3))
+            image[:, :, 0] = 1
+            return np.tile(image.ravel(), (len(z), 1))
+
+    path = tmp_path / "rgb_manifold.png"
+    _plot_latent_manifold(RGBDecoder(), path, steps=2, shape=(16, 16, 3))
+    from PIL import Image
+
+    image = np.asarray(Image.open(path).convert("RGB"))
+    assert np.any(image[:, :, 0] != image[:, :, 1])
+
+
+def test_new_letter_rejects_training_bitmap(tmp_path, monkeypatch):
+    class Decoder:
+        def decode(self, z):
+            return np.zeros((len(z), 35))
+
+    monkeypatch.setattr(
+        "scripts.generate.load_dataset",
+        lambda cfg: {"image_shape": (7, 5), "labels": ["a"], "X_train": np.zeros((1, 35))},
+    )
+    with pytest.raises(ValueError, match="coincide"):
+        plot_new_letter(Decoder(), {}, pd.DataFrame(), np.zeros(2), tmp_path / "letter.png", "H")
+
+
+def test_new_letter_reports_nearest_training_pattern(tmp_path, monkeypatch, capsys):
+    class Decoder:
+        def decode(self, z):
+            output = np.zeros((len(z), 35))
+            output[:, :2] = 1
+            return output
+
+    monkeypatch.setattr(
+        "scripts.generate.load_dataset",
+        lambda cfg: {"image_shape": (7, 5), "labels": ["a"], "X_train": np.zeros((1, 35))},
+    )
+    path = tmp_path / "letter.png"
+    plot_new_letter(Decoder(), {}, pd.DataFrame({"z1": [0.0], "z2": [0.0]}), np.ones(2), path, "H")
+    assert path.is_file()
+    assert "vecino 'a', distancia 2 píxeles" in capsys.readouterr().out

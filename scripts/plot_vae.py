@@ -14,6 +14,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tp5.analysis.latent import load_latent_data, load_model_from_run
+from tp5.data.loader import load_dataset
 
 
 def _run_path(runs_dir: pathlib.Path, run_id: str) -> pathlib.Path:
@@ -180,14 +181,23 @@ def _plot_latent_posterior(run_dir: pathlib.Path, npz_path: pathlib.Path, path: 
     plt.close(fig)
 
 
-def _plot_latent_manifold(model: object, path: pathlib.Path, steps: int = 13) -> None:
+def _plot_latent_manifold(
+    model: object,
+    path: pathlib.Path,
+    steps: int = 13,
+    shape: Tuple[int, ...] = (16, 16, 3),
+) -> None:
     axis_values = np.linspace(-2.5, 2.5, steps)
     grid_1, grid_2 = np.meshgrid(axis_values, axis_values)
     latent = np.stack([grid_1.ravel(), grid_2.ravel()], axis=1)
     decoded = model.decode(latent)
     fig, axes = plt.subplots(steps, steps, figsize=(12, 12), dpi=140)
     for index, axis in enumerate(axes.flat):
-        axis.imshow(decoded[index].reshape(16, 16, 3), interpolation="nearest")
+        image = decoded[index].reshape(shape)
+        if len(shape) == 2:
+            axis.imshow(image, cmap="gray", vmin=0, vmax=1, interpolation="nearest")
+        else:
+            axis.imshow(image, interpolation="nearest")
         axis.set_axis_off()
     fig.suptitle("Decoder sobre una grilla del prior N(0,I), espacio latente 2D", y=0.995)
     fig.tight_layout()
@@ -296,7 +306,18 @@ def main() -> None:
     parser.add_argument("--data", default="data/processed/sprites.npz")
     parser.add_argument("--output-dir", default="figures/vae")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--manifold-run", help="Graficar sólo la grilla de una corrida VAE de sprites 2D.")
     args = parser.parse_args()
+
+    if args.manifold_run:
+        model, cfg = load_model_from_run(args.manifold_run)
+        if cfg["model"]["type"] != "vae" or cfg["data"]["dataset"] != "sprites" or model.latent_dim != 2:
+            parser.error("--manifold-run requiere un VAE de sprites con dimensión latente 2.")
+        data = load_dataset(cfg)
+        path = pathlib.Path(args.output_dir) / "latent_manifold_2d.png"
+        _plot_latent_manifold(model, path, shape=data["image_shape"])
+        print(f"Grilla latente guardada en {path}")
+        return
 
     summary_path = pathlib.Path(args.summary)
     runs_dir = pathlib.Path(args.runs_dir)
@@ -357,7 +378,7 @@ def main() -> None:
     vae_dir = _run_path(runs_dir, vae_row["run_id"])
     vae_model, _ = load_model_from_run(vae_dir)
     _plot_latent_posterior(vae_dir, archive_path, output_dir / "latent_posterior_2d.png")
-    _plot_latent_manifold(vae_model, output_dir / "latent_manifold_2d.png")
+    _plot_latent_manifold(vae_model, output_dir / "latent_manifold_2d.png", shape=tuple(archive["shape"]))
     best_vae = _lowest_validation_row(
         runs[
             (runs["_warmup"] == warmup_default)
